@@ -76,6 +76,7 @@ Mit `--only crying_chain ai_assessment` laufen nach Einrichtung und Grundzustand
 Konsole, mit der du Ereignisse auslöst:
 
 ```text
+lab> monitor on        der Schalter „Monitoring"
 lab> cry on            Frigate hört Weinen
 lab> tap seen          ein Elternteil tippt „Gesehen"
 lab> breath 0          das Radar sieht keine Atembewegung mehr
@@ -86,7 +87,8 @@ lab> pushes            was die simulierten Handys bekommen haben
 lab> status            was CheckBaby gerade sieht
 ```
 
-Zuerst den Schalter „Monitoring" einschalten, sonst meldet CheckBaby nur Rauch und Testalarme. Der Stand liegt
+Zuerst die Überwachung einschalten (`monitor on` oder der Schalter „Monitoring" in der Oberfläche), sonst meldet
+CheckBaby nur Rauch und Testalarme. Der Stand liegt
 in `lab/runtime` und bleibt zwischen den Starts erhalten; den Ordner löschen heißt neu anfangen.
 
 `frigate_sim.py` lässt sich auch allein gegen einen beliebigen Broker starten, zum Beispiel um ein echtes

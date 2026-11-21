@@ -27,6 +27,7 @@ HELP = """Commands
   door open|closed  bed in|out         smoke on|off      internet on|off
   ai ok|risky|prone|error              what the simulated AI answers next
   tap seen|quiet    a parent taps the button on the notification
+  monitor on|off    the switch "Monitoring"
   status            what CheckBaby sees right now
   pushes            the notifications the simulated phones received
   exit"""
@@ -106,6 +107,9 @@ async def _command(hass: Any, sim: FrigateSim, entry_id: str, line: str) -> bool
         await lab("ai", {"mode": mode, "fields": fields.get(value, {})})
     elif command == "tap":
         await lab("tap", {"button": value, "entry_id": entry_id})
+    elif command == "monitor":
+        coordinator = hass.config_entries.async_get_entry(entry_id).runtime_data.coordinator
+        await coordinator.async_set_setting("armed", value == "on")
     elif command == "status":
         monitor = hass.config_entries.async_get_entry(entry_id).runtime_data.coordinator.monitor
         alerts = {kind.value: alert.level.name.lower() for kind, alert in monitor.alerts.active.items()}

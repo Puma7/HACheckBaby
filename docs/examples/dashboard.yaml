@@ -1,10 +1,10 @@
 # CheckBaby example dashboard (English entity IDs)
 #
-# UNTESTED: this file has never been loaded into a Home Assistant dashboard.
-# Two things were checked: it is valid YAML, and every CheckBaby entity ID in it
-# is one that Home Assistant 2026.2 and 2026.10 really create for a child named
-# "baby" in the automated test environment. Whether the cards look right has
-# not been seen by anyone. Expect to adjust it.
+# Tested in the lab only: this file was loaded as a YAML dashboard into a real
+# Home Assistant 2026.11 with simulated devices (see lab/README.md) and showed
+# live values there. It has not been used with a real camera. Every CheckBaby
+# entity ID in it is one that Home Assistant 2026.2 and 2026.10 really create
+# for a child named "baby". Expect to adjust it to your taste.
 #
 # The entity IDs assume
 #   - a child named "baby" (the name you typed in the setup dialog), and
