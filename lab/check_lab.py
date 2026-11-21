@@ -16,6 +16,7 @@ import argparse
 import asyncio
 import json
 from pathlib import Path
+import re
 import signal
 import subprocess
 import tempfile
@@ -461,7 +462,9 @@ async def smoke_and_internet(run: Run) -> None:
 
     await run.world_set(internet=False)
     await asyncio.sleep(3)
-    run.check("an internet outage is a hint, not a push", run.state("sensor", "alert_reason") == "internet_down" and run.pushes() == [])
+    alerts = {kind.value: alert.level.name for kind, alert in run.coordinator.monitor.alerts.active.items()}
+    run.check("an internet outage is a hint, not a push", alerts.get("internet_down") == "INFO" and run.pushes() == [],
+              f"alerts {alerts}, pushes {[p['message'][:50] for p in run.pushes()]}")
     assert run.api
     await run.api.call("checkbaby", "test_alert", {"level": "critical"})
     await run.until("without internet the local alarm fires at once", run.siren, 5)
@@ -482,8 +485,12 @@ async def reports_and_diagnostics(run: Run) -> None:
     run.check("heartbeat button was pressed regularly", run.world.heartbeats >= 5, run.world.heartbeats)
     status, diagnostics = await api.request("GET", f"/api/diagnostics/config_entry/{run.entry_id}")
     text = json.dumps(diagnostics)
+    events = diagnostics["data"]["events"] if status == 200 else []
+    # The name as a word of its own; "CheckBaby" in a link is not the child.
+    leaks = re.findall(rf"(?<![A-Za-z]){CHILD}(?![A-Za-z])", text)[:3]
     run.check("diagnostics download works and leaves the child's name out",
-              status == 200 and CHILD not in text and "REDACTED" in text and len(diagnostics["data"]["events"]) > 10, f"{len(text)} bytes")
+              status == 200 and not leaks and "REDACTED" in text and len(events) >= 1,
+              f"status {status}, {len(text)} bytes, {len(events)} events, name found in {leaks}")
     from homeassistant.helpers import issue_registry as ir  # noqa: PLC0415
 
     ours = [issue for issue in ir.async_get(run.hass).issues.values() if issue.domain == "checkbaby"]

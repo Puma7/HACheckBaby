@@ -27,6 +27,7 @@ Read `docs/MASTERPLAN.md` (German) before changing behaviour: it holds the archi
 - Translations are generated: edit the `EN` and `DE` tables in `scripts/gen_strings.py` and run `python scripts/gen_strings.py custom_components/checkbaby`. Never edit the JSON files by hand. Notification texts live in `texts.py`.
 - Use `from .schema_compat import vol` for schemas: Home Assistant validates with voluptuous up to some version and probatio after it.
 - `engine/` is a separate program with its own dependencies and tests; see `engine/README.md`.
+- `lab/` runs a real Home Assistant with a real MQTT broker against simulated devices (`python lab/check_lab.py`, about nine minutes, Python 3.14 and Mosquitto needed). Run it after changes to alert timing, the coordinator or the config flows: it has found bugs the mocked tests could not. `lab/custom_components/checkbaby_lab` is the simulator and never ships.
 
 ## Running checks
 

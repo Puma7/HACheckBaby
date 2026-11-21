@@ -42,7 +42,7 @@ Beim ersten Start lädt Home Assistant die Pakete der benutzten Integrationen se
 .venv-lab/bin/python lab/check_lab.py
 ```
 
-Dauert etwa zehn Minuten, weil die Abläufe in Echtzeit durchlaufen werden (ein lokaler Alarm kommt nach einer
+Dauert etwa neun Minuten, weil die Abläufe in Echtzeit durchlaufen werden (ein lokaler Alarm kommt nach einer
 Minute, also wartet der Lauf eine Minute). Am Ende steht, wie viele Prüfungen bestanden wurden; das Ergebnis
 liegt auch in `lab/reports/latest.json`. Jeder Lauf beginnt in einem leeren, temporären Home Assistant.
 
@@ -63,6 +63,7 @@ liegt auch in `lab/reports/latest.json`. Jeder Lauf beginnt in einem leeren, tem
 
 Mit `--long` wartet der Lauf vor dem Neustart zusätzlich zwei Minuten und prüft die Meldung „war unterbrochen".
 Mit `--only crying_chain ai_assessment` laufen nach Einrichtung und Grundzustand nur die genannten Szenarien.
+`reports_and_diagnostics` setzt die vorherigen Szenarien voraus (Schlafzeit, Herzschlag) und schlägt allein gestartet fehl.
 
 ## Labor zum Anfassen
 
@@ -98,3 +99,18 @@ Home Assistant ohne Frigate zu füttern.
 - `custom_components/checkbaby_lab/`: die simulierten Geräte. Diese Integration gehört nur ins Labor.
 - `check_lab.py`: der Abnahmelauf
 - `run_lab.py`: das Labor zum Anfassen
+
+## Was das Labor schon gefunden hat
+
+Fehler, die erst im echten Home Assistant sichtbar wurden und behoben sind:
+
+- Nach jedem Start stand der Zustand 20 Sekunden lang auf „betreut", weil eine geschlossen gemeldete Tür wie
+  eine gerade geschlossene aussah.
+- Ein Radar ohne Messwert führte zu einer Störungswarnung, die kritisch wurde, obwohl der
+  Atembewegungs-Alarm ausgeschaltet war.
+- Der Schritt von Warnung zu kritisch startete die Minute bis zum lokalen Alarm neu.
+- Bei kurzer Warnzeit meldete die Nachricht „weint", während der Zustand noch „schläft" zeigte.
+
+Und eine Falle im Labor selbst, die auch andere Labore trifft: Home Assistant ab 2026.11 behandelt einen
+`http:`-Block aus YAML als Probelauf und startet sich fünf Minuten nach dem Start neu, wenn er nicht
+bestätigt wird. `labkit.py` bestätigt ihn deshalb direkt nach dem Start.

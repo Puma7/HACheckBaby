@@ -604,6 +604,19 @@ Stand 21.11.2026. „Getestet" heißt hier: durch automatische Tests abgedeckt, 
 | Auswertung | Schlafprotokoll, Aufwachen, Weinzeit, Schnell-Check und Nachtbericht als Knopf und als Aktion mit Rückgabewerten |
 | Betrieb | Einstellungen, Alarme und Schlafprotokoll überstehen Neustarts; Diagnose-Download ohne Daten des Kindes; Ereignisprotokoll jeder Entscheidung |
 
+### Im Labor geprüft
+
+Das Labor (`lab/`, Beschreibung in `lab/README.md`) startet ein echtes Home Assistant mit echtem MQTT-Broker und spielt zwölf Szenarien in Echtzeit durch. Frigate, Handys, Sensoren, Kamera und KI-Modell sind simuliert; die Integration, die MQTT-Anbindung, Home Assistants `ai_task` und die Vital-Engine sind echt. Damit belegt:
+
+- Die Einrichtung läuft über die Schnittstelle der Oberfläche vollständig durch, alle Dialoge kommen dort als Formular an.
+- Der Aufruf von `ai_task` stimmt: Das Kamerabild wird aufgelöst und kommt als JPEG-Datei beim Modell an.
+- Die Alarmkette läuft in Echtzeit wie beschrieben, einschließlich lokalem Alarm, Wiederholung und „Gesehen".
+- Ein Neustart des MQTT-Brokers wird gemeldet und heilt von selbst.
+- Der echte Engine-Prozess meldet sein Testmuster über MQTT, ein Absturz wird erkannt.
+- Einstellungen und Schlafprotokoll überstehen einen echten Neustart.
+
+Weiter offen bleibt, was nur echte Geräte zeigen können: ob Frigate genau diese Nachrichten sendet, ob ein Push auf einem Handy ankommt und ertönt, wie gut ein echtes KI-Modell urteilt und ob Radar und Engine bei einem Kind tragen.
+
 ### Geschrieben, aber nur eingeschränkt prüfbar
 
 - **Vital-Engine** (`engine/`): eigener Dienst für die Atem-Mikrobewegung aus dem Videobild, mit 189 eigenen Tests. Geprüft mit künstlichen Signalen, als Container gegen einen echten MQTT-Broker und gegen einen künstlichen RTSP-Videostrom. Ungeprüft: jede echte Kamera, go2rtc als Quelle, das Add-on-Paket. Alle Schwellen sind nur an künstlichen Bildern eingestellt. Details und Grenzen in `engine/README.md`.
@@ -637,7 +650,7 @@ Stand 21.11.2026. „Getestet" heißt hier: durch automatische Tests abgedeckt, 
 | Raumklima aktiv regeln, Nachtlicht, Einschlafhilfe | Nicht gebaut; der Ruhezeit-Sensor und das Alarm-Ereignis sind die Bausteine für eigene Automationen |
 | Telefonanruf als Eskalation, Smartwatch, Fernseher | Nicht gebaut |
 | Modell-Vergleich mit eigenem Szenensatz | Nicht gebaut; braucht echte Bilder vom Schlafplatz |
-| Szenario-Labor mit echtem Frigate | Nicht gebaut |
+| Szenario-Labor | Gebaut, mit echtem Home Assistant, echtem MQTT-Broker und simuliertem Frigate (`lab/`). Ein echtes Frigate ist nicht Teil davon. |
 | Roh-Radar mit eigener Auswertung | Nicht gebaut, laut Plan nur falls die fertigen Sensoren nicht tragen |
 | Markenbilder, HACS-Standardliste, rechtliche Prüfung | Vor v1.0 |
 
