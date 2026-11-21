@@ -9,8 +9,54 @@
           "birth_date": "Birth date or expected due date"
         },
         "data_description": {
-          "child_name": "Used for the device and its entities.",
+          "child_name": "Used for the device, its entities and the notifications.",
           "birth_date": "Selects the age profile and its default thresholds."
+        }
+      },
+      "place": {
+        "title": "Sleep place",
+        "description": "Where the child sleeps, with its camera and sensors. A sound source is required: a Frigate camera with audio detection, or a crying sensor. Everything else is optional. More sleep places can be added later.",
+        "data": {
+          "name": "Name of the sleep place",
+          "frigate_camera": "Frigate camera name",
+          "camera_entity": "Camera entity",
+          "bed_zone": "Frigate zone of the bed",
+          "door_entity": "Door contact",
+          "person_is_caregiver": "A person seen by the camera counts as a caregiver",
+          "presence_entity": "Presence sensor for the bed",
+          "temperature_entity": "Room temperature",
+          "humidity_entity": "Room humidity",
+          "breath_rate_entity": "Breathing rate sensor (radar)",
+          "heart_rate_entity": "Heart rate sensor (radar)",
+          "engine_id": "Vital engine ID",
+          "audio_stream_url": "Audio stream address",
+          "cry_entity": "Crying sensor",
+          "motion_entity": "Motion sensor",
+          "level_entity": "Sound level sensor"
+        },
+        "data_description": {
+          "frigate_camera": "The camera's name in the Frigate configuration. Crying, sound level and motion are read from Frigate over MQTT.",
+          "camera_entity": "Used for the picture in notifications and for the AI assessment.",
+          "bed_zone": "If set, a cat or dog detected in this zone raises a warning.",
+          "door_entity": "While the door is open someone is with the child and child-related alerts pause.",
+          "person_is_caregiver": "Leave off if Frigate detects the child itself as a person.",
+          "presence_entity": "On while the child is in bed, for example a zone of a presence radar.",
+          "breath_rate_entity": "Breaths per minute, for example from a 60 GHz radar sensor. Used for the breathing-movement hint.",
+          "engine_id": "Only with the CheckBaby vital engine: the ID configured there.",
+          "audio_stream_url": "Played on the parents' speaker by the audio relay, for example an audio stream from go2rtc.",
+          "cry_entity": "Alternative to Frigate, for example the crying detection of the camera itself."
+        }
+      },
+      "notify": {
+        "title": "Who is told",
+        "description": "Choose the phones that receive alerts and, if you have one, a local alarm that works without internet. At least one of the two is required.",
+        "data": {
+          "notify_services": "Phones",
+          "local_alarm_entities": "Local alarm (siren, light, switch)"
+        },
+        "data_description": {
+          "notify_services": "Notify services of the Home Assistant companion app. Critical alerts go to all of them.",
+          "local_alarm_entities": "Switched on when an alert stays unanswered for a minute, or at once if the internet is down. Put it where you sleep, never in the child's room."
         }
       },
       "disclaimer": {
@@ -23,14 +69,247 @@
     },
     "error": {
       "name_required": "Enter a name.",
+      "no_sound_source": "Enter a Frigate camera or choose a crying sensor: without a sound source the monitor cannot hear the child.",
+      "no_alert_target": "Choose at least one phone or a local alarm; otherwise no alert could reach anyone.",
+      "ai_consent_required": "Confirm that images may be sent, or remove the AI tasks.",
       "must_acknowledge": "Confirm the notice to continue."
     },
     "abort": {
       "already_configured": "A child with this name is already set up."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "CheckBaby options",
+        "description": "Who is told, and what else is connected. Sleep places are managed as separate entries of the child.",
+        "data": {
+          "notify_services": "Phones",
+          "local_alarm_entities": "Local alarm (siren, light, switch)",
+          "babysitter_service": "Babysitter's phone",
+          "heartbeat_buttons": "Dead-man heartbeat buttons",
+          "smoke_entities": "Smoke and CO detectors",
+          "internet_entity": "Internet connectivity sensor",
+          "vox_media_player": "Speaker for the audio relay",
+          "ai_task_entities": "AI tasks, in order of preference",
+          "ai_consent": "Images of the child may be sent to these AI tasks",
+          "ai_calls_per_hour": "AI calls per hour at most",
+          "frigate_topic_prefix": "Frigate MQTT topic prefix",
+          "dashboard_path": "Dashboard opened from a notification"
+        },
+        "data_description": {
+          "notify_services": "Notify services of the Home Assistant companion app. Critical alerts go to all of them.",
+          "local_alarm_entities": "Switched on when an alert stays unanswered for a minute, or at once if the internet is down. Put it where you sleep, never in the child's room.",
+          "babysitter_service": "Receives alerts only while the mode is “Babysitter”.",
+          "heartbeat_buttons": "Pressed every 30 seconds while monitoring is armed and healthy, so that a separate device can sound when Home Assistant fails.",
+          "smoke_entities": "Passed through as critical alerts, even while monitoring is off.",
+          "internet_entity": "While it is off, the local alarm fires at once.",
+          "ai_task_entities": "The first one that answers is used. A cloud model receives camera images of the child; a local model keeps them at home.",
+          "ai_consent": "Required to use the AI assessment. Check your provider's terms on how images are used."
+        }
+      }
+    },
+    "error": {
+      "no_alert_target": "Choose at least one phone or a local alarm; otherwise no alert could reach anyone.",
+      "ai_consent_required": "Confirm that images may be sent, or remove the AI tasks."
+    }
+  },
+  "config_subentries": {
+    "sleep_place": {
+      "entry_type": "Sleep place",
+      "initiate_flow": {
+        "user": "Add sleep place",
+        "reconfigure": "Change sleep place"
+      },
+      "step": {
+        "user": {
+          "title": "Add sleep place",
+          "description": "Where the child sleeps, with its camera and sensors. A sound source is required: a Frigate camera with audio detection, or a crying sensor. Everything else is optional. More sleep places can be added later.",
+          "data": {
+            "name": "Name of the sleep place",
+            "frigate_camera": "Frigate camera name",
+            "camera_entity": "Camera entity",
+            "bed_zone": "Frigate zone of the bed",
+            "door_entity": "Door contact",
+            "person_is_caregiver": "A person seen by the camera counts as a caregiver",
+            "presence_entity": "Presence sensor for the bed",
+            "temperature_entity": "Room temperature",
+            "humidity_entity": "Room humidity",
+            "breath_rate_entity": "Breathing rate sensor (radar)",
+            "heart_rate_entity": "Heart rate sensor (radar)",
+            "engine_id": "Vital engine ID",
+            "audio_stream_url": "Audio stream address",
+            "cry_entity": "Crying sensor",
+            "motion_entity": "Motion sensor",
+            "level_entity": "Sound level sensor"
+          },
+          "data_description": {
+            "frigate_camera": "The camera's name in the Frigate configuration. Crying, sound level and motion are read from Frigate over MQTT.",
+            "camera_entity": "Used for the picture in notifications and for the AI assessment.",
+            "bed_zone": "If set, a cat or dog detected in this zone raises a warning.",
+            "door_entity": "While the door is open someone is with the child and child-related alerts pause.",
+            "person_is_caregiver": "Leave off if Frigate detects the child itself as a person.",
+            "presence_entity": "On while the child is in bed, for example a zone of a presence radar.",
+            "breath_rate_entity": "Breaths per minute, for example from a 60 GHz radar sensor. Used for the breathing-movement hint.",
+            "engine_id": "Only with the CheckBaby vital engine: the ID configured there.",
+            "audio_stream_url": "Played on the parents' speaker by the audio relay, for example an audio stream from go2rtc.",
+            "cry_entity": "Alternative to Frigate, for example the crying detection of the camera itself."
+          }
+        },
+        "reconfigure": {
+          "title": "Change sleep place",
+          "description": "Where the child sleeps, with its camera and sensors. A sound source is required: a Frigate camera with audio detection, or a crying sensor. Everything else is optional. More sleep places can be added later.",
+          "data": {
+            "name": "Name of the sleep place",
+            "frigate_camera": "Frigate camera name",
+            "camera_entity": "Camera entity",
+            "bed_zone": "Frigate zone of the bed",
+            "door_entity": "Door contact",
+            "person_is_caregiver": "A person seen by the camera counts as a caregiver",
+            "presence_entity": "Presence sensor for the bed",
+            "temperature_entity": "Room temperature",
+            "humidity_entity": "Room humidity",
+            "breath_rate_entity": "Breathing rate sensor (radar)",
+            "heart_rate_entity": "Heart rate sensor (radar)",
+            "engine_id": "Vital engine ID",
+            "audio_stream_url": "Audio stream address",
+            "cry_entity": "Crying sensor",
+            "motion_entity": "Motion sensor",
+            "level_entity": "Sound level sensor"
+          },
+          "data_description": {
+            "frigate_camera": "The camera's name in the Frigate configuration. Crying, sound level and motion are read from Frigate over MQTT.",
+            "camera_entity": "Used for the picture in notifications and for the AI assessment.",
+            "bed_zone": "If set, a cat or dog detected in this zone raises a warning.",
+            "door_entity": "While the door is open someone is with the child and child-related alerts pause.",
+            "person_is_caregiver": "Leave off if Frigate detects the child itself as a person.",
+            "presence_entity": "On while the child is in bed, for example a zone of a presence radar.",
+            "breath_rate_entity": "Breaths per minute, for example from a 60 GHz radar sensor. Used for the breathing-movement hint.",
+            "engine_id": "Only with the CheckBaby vital engine: the ID configured there.",
+            "audio_stream_url": "Played on the parents' speaker by the audio relay, for example an audio stream from go2rtc.",
+            "cry_entity": "Alternative to Frigate, for example the crying detection of the camera itself."
+          }
+        }
+      },
+      "error": {
+        "name_required": "Enter a name.",
+        "no_sound_source": "Enter a Frigate camera or choose a crying sensor: without a sound source the monitor cannot hear the child."
+      },
+      "abort": {
+        "reconfigure_successful": "The sleep place was updated."
+      }
+    }
+  },
   "entity": {
     "sensor": {
+      "noise_level": {
+        "name": "Sound level"
+      },
+      "noise_floor": {
+        "name": "Learned noise floor"
+      },
+      "last_motion": {
+        "name": "Last movement"
+      },
+      "asleep_since": {
+        "name": "Asleep since"
+      },
+      "last_sleep_duration": {
+        "name": "Last sleep"
+      },
+      "sleep_today": {
+        "name": "Sleep today"
+      },
+      "crying_today": {
+        "name": "Crying today"
+      },
+      "wakeups_tonight": {
+        "name": "Wake-ups tonight"
+      },
+      "breathing_rate": {
+        "name": "Breathing rate (estimate)"
+      },
+      "heart_rate": {
+        "name": "Heart rate (estimate)"
+      },
+      "monitoring_problems": {
+        "name": "Monitoring problems"
+      },
+      "ai_calls_last_hour": {
+        "name": "AI calls in the last hour"
+      },
+      "state": {
+        "name": "State",
+        "state": {
+          "empty": "Not in bed",
+          "asleep": "Asleep",
+          "restless": "Restless",
+          "awake": "Awake",
+          "crying": "Crying",
+          "attended": "Attended",
+          "unknown": "Unknown"
+        }
+      },
+      "alert_level": {
+        "name": "Alert level",
+        "state": {
+          "none": "None",
+          "info": "Hint",
+          "warning": "Warning",
+          "critical": "Critical"
+        }
+      },
+      "alert_reason": {
+        "name": "Alert reason",
+        "state": {
+          "none": "None",
+          "crying": "Crying",
+          "no_breathing": "No breathing movement",
+          "airway_risk": "Airway risk",
+          "prone_position": "Prone position",
+          "hazard": "Loose objects in bed",
+          "camera_view": "Camera view blocked",
+          "left_bed": "Left the bed",
+          "pet_in_bed": "Pet in bed",
+          "climate": "Room climate",
+          "smoke": "Smoke or CO",
+          "monitoring_failure": "Monitoring failure",
+          "internet_down": "No internet",
+          "interruption": "Monitoring was interrupted",
+          "test": "Test alert"
+        }
+      },
+      "sleeping_bag": {
+        "name": "Sleeping bag suggestion",
+        "state": {
+          "tog_3_5": "3.5 TOG",
+          "tog_2_5_plus_layer": "2.5 TOG plus an extra layer",
+          "tog_2_5": "2.5 TOG",
+          "tog_1_0": "1.0 TOG",
+          "tog_0_5": "0.5 TOG",
+          "tog_0_2": "0.2 TOG or less"
+        }
+      },
+      "ai_assessment": {
+        "name": "AI assessment",
+        "state": {
+          "ok": "All fine",
+          "attention": "Take a look",
+          "warning": "Warning",
+          "critical": "Critical"
+        }
+      },
+      "position": {
+        "name": "Position",
+        "state": {
+          "supine": "On the back",
+          "prone": "On the tummy",
+          "side": "On the side",
+          "sitting": "Sitting",
+          "standing": "Standing",
+          "unknown": "Unknown"
+        }
+      },
       "age_profile": {
         "name": "Age profile",
         "state": {
@@ -39,6 +318,286 @@
           "toddler": "Toddler"
         }
       }
+    },
+    "binary_sensor": {
+      "crying": {
+        "name": "Crying"
+      },
+      "motion": {
+        "name": "Movement"
+      },
+      "in_bed": {
+        "name": "In bed"
+      },
+      "attended": {
+        "name": "Someone is with the child"
+      },
+      "breathing_movement": {
+        "name": "Breathing movement"
+      },
+      "alert_active": {
+        "name": "Unanswered alert"
+      },
+      "monitoring_problem": {
+        "name": "Monitoring problem"
+      },
+      "ai_available": {
+        "name": "AI assessment available"
+      },
+      "quiet_time": {
+        "name": "Quiet time"
+      },
+      "audio_relay": {
+        "name": "Audio relay playing"
+      }
+    },
+    "switch": {
+      "monitoring": {
+        "name": "Monitoring"
+      },
+      "privacy_mode": {
+        "name": "Privacy mode"
+      },
+      "ai_assessment_enabled": {
+        "name": "AI assessment"
+      },
+      "breathing_alert": {
+        "name": "Breathing-movement alert"
+      },
+      "audio_relay_enabled": {
+        "name": "Audio relay"
+      }
+    },
+    "number": {
+      "cry_warning_s": {
+        "name": "Crying before a warning"
+      },
+      "cry_critical_s": {
+        "name": "Unanswered crying before critical"
+      },
+      "noise_margin_db": {
+        "name": "Loudness above the noise floor"
+      },
+      "no_breathing_s": {
+        "name": "No breathing movement before an alert"
+      },
+      "ai_interval_min": {
+        "name": "AI routine check interval"
+      },
+      "temp_min": {
+        "name": "Lowest room temperature"
+      },
+      "temp_max": {
+        "name": "Highest room temperature"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": {
+          "night": "Night",
+          "nap": "Nap",
+          "babysitter": "Babysitter"
+        }
+      },
+      "sensitivity": {
+        "name": "Sensitivity",
+        "state": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "vital_fusion": {
+        "name": "Vital sources must agree",
+        "state": {
+          "any": "One source is enough",
+          "all": "All sources"
+        }
+      },
+      "on_duty": {
+        "name": "On duty",
+        "state": {
+          "all": "Everyone"
+        }
+      },
+      "active_place": {
+        "name": "Active sleep place"
+      }
+    },
+    "button": {
+      "acknowledge": {
+        "name": "Seen"
+      },
+      "snooze": {
+        "name": "Quiet for 5 minutes"
+      },
+      "quick_check": {
+        "name": "Quick check"
+      },
+      "assess_now": {
+        "name": "AI check now"
+      },
+      "night_report": {
+        "name": "Send night report"
+      },
+      "test_alert": {
+        "name": "Test alert"
+      }
+    },
+    "event": {
+      "alert": {
+        "name": "Alert",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "crying": "Crying",
+              "no_breathing": "No breathing movement",
+              "airway_risk": "Airway risk",
+              "prone_position": "Prone position",
+              "hazard": "Loose objects in bed",
+              "camera_view": "Camera view blocked",
+              "left_bed": "Left the bed",
+              "pet_in_bed": "Pet in bed",
+              "climate": "Room climate",
+              "smoke": "Smoke or CO",
+              "monitoring_failure": "Monitoring failure",
+              "internet_down": "No internet",
+              "interruption": "Monitoring was interrupted",
+              "test": "Test alert"
+            }
+          }
+        }
+      }
+    }
+  },
+  "selector": {
+    "test_level": {
+      "options": {
+        "warning": "Warning",
+        "critical": "Critical"
+      }
+    }
+  },
+  "services": {
+    "acknowledge": {
+      "name": "Acknowledge alerts",
+      "description": "Marks all active alerts as seen. Monitoring continues; an alert that gets worse notifies again.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Child",
+          "description": "Only needed when more than one child is set up."
+        }
+      }
+    },
+    "snooze": {
+      "name": "Snooze warnings",
+      "description": "Holds warnings back for a while. Critical alerts still come through.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Child",
+          "description": "Only needed when more than one child is set up."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "How long warnings are held back."
+        }
+      }
+    },
+    "test_alert": {
+      "name": "Send a test alert",
+      "description": "Runs the whole notification chain until it is acknowledged, at most 10 minutes.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Child",
+          "description": "Only needed when more than one child is set up."
+        },
+        "level": {
+          "name": "Level",
+          "description": "A critical test checks that the alert sounds through Do Not Disturb."
+        }
+      }
+    },
+    "start_sleep": {
+      "name": "Start sleep",
+      "description": "Marks the child as asleep now.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Child",
+          "description": "Only needed when more than one child is set up."
+        }
+      }
+    },
+    "end_sleep": {
+      "name": "End sleep",
+      "description": "Marks the child as awake now.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Child",
+          "description": "Only needed when more than one child is set up."
+        }
+      }
+    },
+    "assess_now": {
+      "name": "AI assessment now",
+      "description": "Asks the configured AI task about a fresh camera image and returns the assessment.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Child",
+          "description": "Only needed when more than one child is set up."
+        }
+      }
+    },
+    "quick_check": {
+      "name": "Quick check",
+      "description": "Returns how the child is right now: state, alert, sleep time and a one-sentence summary.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Child",
+          "description": "Only needed when more than one child is set up."
+        },
+        "with_ai": {
+          "name": "With AI assessment",
+          "description": "Take a fresh AI look first."
+        },
+        "notify": {
+          "name": "Send as notification",
+          "description": "Also send the summary to whoever is on duty."
+        }
+      }
+    },
+    "night_report": {
+      "name": "Night report",
+      "description": "Returns sleep time, wake-ups and crying since the evening.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Child",
+          "description": "Only needed when more than one child is set up."
+        },
+        "notify": {
+          "name": "Send as notification",
+          "description": "Also send the summary to whoever is on duty."
+        }
+      }
+    }
+  },
+  "issues": {
+    "no_alert_target": {
+      "title": "CheckBaby cannot alert anyone for {child}",
+      "description": "Neither a phone nor a local alarm is configured. Open the options of the CheckBaby entry and choose at least one."
+    },
+    "no_sleep_place": {
+      "title": "No sleep place is set up for {child}",
+      "description": "Without a sleep place there is nothing to monitor. Add one to the CheckBaby entry."
+    },
+    "mqtt_missing": {
+      "title": "CheckBaby needs MQTT for {child}",
+      "description": "The sleep place uses a Frigate camera or the vital engine, but the MQTT integration is not set up. Set up MQTT, then reload CheckBaby."
+    }
+  },
+  "exceptions": {
+    "entry_required": {
+      "message": "Choose the child: no CheckBaby entry is loaded, or more than one."
     }
   }
 }

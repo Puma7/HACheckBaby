@@ -9,8 +9,54 @@
           "birth_date": "Geburtsdatum oder errechneter Termin"
         },
         "data_description": {
-          "child_name": "Wird für das Gerät und seine Entitäten verwendet.",
+          "child_name": "Wird für das Gerät, seine Entitäten und die Benachrichtigungen verwendet.",
           "birth_date": "Bestimmt das Altersprofil und dessen Startwerte."
+        }
+      },
+      "place": {
+        "title": "Schlafplatz",
+        "description": "Wo das Kind schläft, mit Kamera und Sensoren. Eine Tonquelle ist nötig: eine Frigate-Kamera mit Audio-Erkennung oder ein Wein-Sensor. Alles andere ist optional. Weitere Schlafplätze lassen sich später hinzufügen.",
+        "data": {
+          "name": "Name des Schlafplatzes",
+          "frigate_camera": "Name der Frigate-Kamera",
+          "camera_entity": "Kamera-Entität",
+          "bed_zone": "Frigate-Zone des Bettes",
+          "door_entity": "Türkontakt",
+          "person_is_caregiver": "Eine von der Kamera erkannte Person zählt als Betreuung",
+          "presence_entity": "Präsenzsensor für das Bett",
+          "temperature_entity": "Raumtemperatur",
+          "humidity_entity": "Luftfeuchte",
+          "breath_rate_entity": "Atemraten-Sensor (Radar)",
+          "heart_rate_entity": "Herzraten-Sensor (Radar)",
+          "engine_id": "ID der Vital-Engine",
+          "audio_stream_url": "Adresse des Ton-Streams",
+          "cry_entity": "Wein-Sensor",
+          "motion_entity": "Bewegungssensor",
+          "level_entity": "Geräuschpegel-Sensor"
+        },
+        "data_description": {
+          "frigate_camera": "Der Name der Kamera in der Frigate-Konfiguration. Weinen, Geräuschpegel und Bewegung kommen per MQTT aus Frigate.",
+          "camera_entity": "Für das Bild in Benachrichtigungen und für die KI-Bewertung.",
+          "bed_zone": "Wenn gesetzt, löst eine Katze oder ein Hund in dieser Zone eine Warnung aus.",
+          "door_entity": "Solange die Tür offen ist, ist jemand beim Kind und die kindbezogenen Alarme pausieren.",
+          "person_is_caregiver": "Ausgeschaltet lassen, wenn Frigate das Kind selbst als Person erkennt.",
+          "presence_entity": "An, solange das Kind im Bett liegt, zum Beispiel eine Zone eines Präsenzradars.",
+          "breath_rate_entity": "Atemzüge pro Minute, zum Beispiel von einem 60-GHz-Radarsensor. Dient dem Atembewegungs-Hinweis.",
+          "engine_id": "Nur mit der CheckBaby-Vital-Engine: die dort eingestellte ID.",
+          "audio_stream_url": "Wird von der Ton-Weiterleitung auf dem Lautsprecher der Eltern abgespielt, zum Beispiel ein Ton-Stream aus go2rtc.",
+          "cry_entity": "Alternative zu Frigate, zum Beispiel die Wein-Erkennung der Kamera selbst."
+        }
+      },
+      "notify": {
+        "title": "Wer benachrichtigt wird",
+        "description": "Wähle die Handys, die Alarme bekommen, und falls vorhanden einen lokalen Alarm, der ohne Internet funktioniert. Mindestens eines von beiden ist nötig.",
+        "data": {
+          "notify_services": "Handys",
+          "local_alarm_entities": "Lokaler Alarm (Sirene, Licht, Schalter)"
+        },
+        "data_description": {
+          "notify_services": "Benachrichtigungsdienste der Home-Assistant-App. Kritische Alarme gehen an alle.",
+          "local_alarm_entities": "Wird eingeschaltet, wenn ein Alarm eine Minute unbeantwortet bleibt, oder sofort, wenn das Internet ausgefallen ist. Gehört ins Elternschlafzimmer, nie ins Kinderzimmer."
         }
       },
       "disclaimer": {
@@ -23,14 +69,247 @@
     },
     "error": {
       "name_required": "Bitte einen Namen eingeben.",
+      "no_sound_source": "Bitte eine Frigate-Kamera eintragen oder einen Wein-Sensor wählen: Ohne Tonquelle kann die Überwachung das Kind nicht hören.",
+      "no_alert_target": "Bitte mindestens ein Handy oder einen lokalen Alarm wählen; sonst könnte kein Alarm jemanden erreichen.",
+      "ai_consent_required": "Bitte bestätigen, dass Bilder gesendet werden dürfen, oder die KI-Aufgaben entfernen.",
       "must_acknowledge": "Bitte den Hinweis bestätigen, um fortzufahren."
     },
     "abort": {
       "already_configured": "Ein Kind mit diesem Namen ist bereits eingerichtet."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "CheckBaby-Optionen",
+        "description": "Wer benachrichtigt wird und was sonst angeschlossen ist. Schlafplätze werden als eigene Einträge des Kindes verwaltet.",
+        "data": {
+          "notify_services": "Handys",
+          "local_alarm_entities": "Lokaler Alarm (Sirene, Licht, Schalter)",
+          "babysitter_service": "Handy des Babysitters",
+          "heartbeat_buttons": "Herzschlag-Tasten für den Dead-Man-Summer",
+          "smoke_entities": "Rauch- und CO-Melder",
+          "internet_entity": "Sensor für die Internetverbindung",
+          "vox_media_player": "Lautsprecher für die Ton-Weiterleitung",
+          "ai_task_entities": "KI-Aufgaben, in bevorzugter Reihenfolge",
+          "ai_consent": "Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden",
+          "ai_calls_per_hour": "KI-Aufrufe pro Stunde höchstens",
+          "frigate_topic_prefix": "MQTT-Präfix von Frigate",
+          "dashboard_path": "Dashboard, das eine Benachrichtigung öffnet"
+        },
+        "data_description": {
+          "notify_services": "Benachrichtigungsdienste der Home-Assistant-App. Kritische Alarme gehen an alle.",
+          "local_alarm_entities": "Wird eingeschaltet, wenn ein Alarm eine Minute unbeantwortet bleibt, oder sofort, wenn das Internet ausgefallen ist. Gehört ins Elternschlafzimmer, nie ins Kinderzimmer.",
+          "babysitter_service": "Bekommt Alarme nur im Modus „Babysitter“.",
+          "heartbeat_buttons": "Werden alle 30 Sekunden gedrückt, solange die Überwachung scharf und störungsfrei ist. So kann ein eigenes Gerät Alarm geben, wenn Home Assistant ausfällt.",
+          "smoke_entities": "Werden als kritische Alarme durchgereicht, auch wenn die Überwachung aus ist.",
+          "internet_entity": "Solange er aus ist, löst der lokale Alarm sofort aus.",
+          "ai_task_entities": "Die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
+          "ai_consent": "Nötig, um die KI-Bewertung zu nutzen. Prüfe in den Bedingungen deines Anbieters, wie Bilder verwendet werden."
+        }
+      }
+    },
+    "error": {
+      "no_alert_target": "Bitte mindestens ein Handy oder einen lokalen Alarm wählen; sonst könnte kein Alarm jemanden erreichen.",
+      "ai_consent_required": "Bitte bestätigen, dass Bilder gesendet werden dürfen, oder die KI-Aufgaben entfernen."
+    }
+  },
+  "config_subentries": {
+    "sleep_place": {
+      "entry_type": "Schlafplatz",
+      "initiate_flow": {
+        "user": "Schlafplatz hinzufügen",
+        "reconfigure": "Schlafplatz ändern"
+      },
+      "step": {
+        "user": {
+          "title": "Schlafplatz hinzufügen",
+          "description": "Wo das Kind schläft, mit Kamera und Sensoren. Eine Tonquelle ist nötig: eine Frigate-Kamera mit Audio-Erkennung oder ein Wein-Sensor. Alles andere ist optional. Weitere Schlafplätze lassen sich später hinzufügen.",
+          "data": {
+            "name": "Name des Schlafplatzes",
+            "frigate_camera": "Name der Frigate-Kamera",
+            "camera_entity": "Kamera-Entität",
+            "bed_zone": "Frigate-Zone des Bettes",
+            "door_entity": "Türkontakt",
+            "person_is_caregiver": "Eine von der Kamera erkannte Person zählt als Betreuung",
+            "presence_entity": "Präsenzsensor für das Bett",
+            "temperature_entity": "Raumtemperatur",
+            "humidity_entity": "Luftfeuchte",
+            "breath_rate_entity": "Atemraten-Sensor (Radar)",
+            "heart_rate_entity": "Herzraten-Sensor (Radar)",
+            "engine_id": "ID der Vital-Engine",
+            "audio_stream_url": "Adresse des Ton-Streams",
+            "cry_entity": "Wein-Sensor",
+            "motion_entity": "Bewegungssensor",
+            "level_entity": "Geräuschpegel-Sensor"
+          },
+          "data_description": {
+            "frigate_camera": "Der Name der Kamera in der Frigate-Konfiguration. Weinen, Geräuschpegel und Bewegung kommen per MQTT aus Frigate.",
+            "camera_entity": "Für das Bild in Benachrichtigungen und für die KI-Bewertung.",
+            "bed_zone": "Wenn gesetzt, löst eine Katze oder ein Hund in dieser Zone eine Warnung aus.",
+            "door_entity": "Solange die Tür offen ist, ist jemand beim Kind und die kindbezogenen Alarme pausieren.",
+            "person_is_caregiver": "Ausgeschaltet lassen, wenn Frigate das Kind selbst als Person erkennt.",
+            "presence_entity": "An, solange das Kind im Bett liegt, zum Beispiel eine Zone eines Präsenzradars.",
+            "breath_rate_entity": "Atemzüge pro Minute, zum Beispiel von einem 60-GHz-Radarsensor. Dient dem Atembewegungs-Hinweis.",
+            "engine_id": "Nur mit der CheckBaby-Vital-Engine: die dort eingestellte ID.",
+            "audio_stream_url": "Wird von der Ton-Weiterleitung auf dem Lautsprecher der Eltern abgespielt, zum Beispiel ein Ton-Stream aus go2rtc.",
+            "cry_entity": "Alternative zu Frigate, zum Beispiel die Wein-Erkennung der Kamera selbst."
+          }
+        },
+        "reconfigure": {
+          "title": "Schlafplatz ändern",
+          "description": "Wo das Kind schläft, mit Kamera und Sensoren. Eine Tonquelle ist nötig: eine Frigate-Kamera mit Audio-Erkennung oder ein Wein-Sensor. Alles andere ist optional. Weitere Schlafplätze lassen sich später hinzufügen.",
+          "data": {
+            "name": "Name des Schlafplatzes",
+            "frigate_camera": "Name der Frigate-Kamera",
+            "camera_entity": "Kamera-Entität",
+            "bed_zone": "Frigate-Zone des Bettes",
+            "door_entity": "Türkontakt",
+            "person_is_caregiver": "Eine von der Kamera erkannte Person zählt als Betreuung",
+            "presence_entity": "Präsenzsensor für das Bett",
+            "temperature_entity": "Raumtemperatur",
+            "humidity_entity": "Luftfeuchte",
+            "breath_rate_entity": "Atemraten-Sensor (Radar)",
+            "heart_rate_entity": "Herzraten-Sensor (Radar)",
+            "engine_id": "ID der Vital-Engine",
+            "audio_stream_url": "Adresse des Ton-Streams",
+            "cry_entity": "Wein-Sensor",
+            "motion_entity": "Bewegungssensor",
+            "level_entity": "Geräuschpegel-Sensor"
+          },
+          "data_description": {
+            "frigate_camera": "Der Name der Kamera in der Frigate-Konfiguration. Weinen, Geräuschpegel und Bewegung kommen per MQTT aus Frigate.",
+            "camera_entity": "Für das Bild in Benachrichtigungen und für die KI-Bewertung.",
+            "bed_zone": "Wenn gesetzt, löst eine Katze oder ein Hund in dieser Zone eine Warnung aus.",
+            "door_entity": "Solange die Tür offen ist, ist jemand beim Kind und die kindbezogenen Alarme pausieren.",
+            "person_is_caregiver": "Ausgeschaltet lassen, wenn Frigate das Kind selbst als Person erkennt.",
+            "presence_entity": "An, solange das Kind im Bett liegt, zum Beispiel eine Zone eines Präsenzradars.",
+            "breath_rate_entity": "Atemzüge pro Minute, zum Beispiel von einem 60-GHz-Radarsensor. Dient dem Atembewegungs-Hinweis.",
+            "engine_id": "Nur mit der CheckBaby-Vital-Engine: die dort eingestellte ID.",
+            "audio_stream_url": "Wird von der Ton-Weiterleitung auf dem Lautsprecher der Eltern abgespielt, zum Beispiel ein Ton-Stream aus go2rtc.",
+            "cry_entity": "Alternative zu Frigate, zum Beispiel die Wein-Erkennung der Kamera selbst."
+          }
+        }
+      },
+      "error": {
+        "name_required": "Bitte einen Namen eingeben.",
+        "no_sound_source": "Bitte eine Frigate-Kamera eintragen oder einen Wein-Sensor wählen: Ohne Tonquelle kann die Überwachung das Kind nicht hören."
+      },
+      "abort": {
+        "reconfigure_successful": "Der Schlafplatz wurde geändert."
+      }
+    }
+  },
   "entity": {
     "sensor": {
+      "noise_level": {
+        "name": "Geräuschpegel"
+      },
+      "noise_floor": {
+        "name": "Gelernter Grundpegel"
+      },
+      "last_motion": {
+        "name": "Letzte Bewegung"
+      },
+      "asleep_since": {
+        "name": "Schläft seit"
+      },
+      "last_sleep_duration": {
+        "name": "Letzter Schlaf"
+      },
+      "sleep_today": {
+        "name": "Schlaf heute"
+      },
+      "crying_today": {
+        "name": "Weinen heute"
+      },
+      "wakeups_tonight": {
+        "name": "Aufgewacht heute Nacht"
+      },
+      "breathing_rate": {
+        "name": "Atemrate (Schätzung)"
+      },
+      "heart_rate": {
+        "name": "Herzrate (Schätzung)"
+      },
+      "monitoring_problems": {
+        "name": "Störungen der Überwachung"
+      },
+      "ai_calls_last_hour": {
+        "name": "KI-Aufrufe in der letzten Stunde"
+      },
+      "state": {
+        "name": "Zustand",
+        "state": {
+          "empty": "Nicht im Bett",
+          "asleep": "Schläft",
+          "restless": "Unruhig",
+          "awake": "Wach",
+          "crying": "Weint",
+          "attended": "Betreut",
+          "unknown": "Unbekannt"
+        }
+      },
+      "alert_level": {
+        "name": "Alarmstufe",
+        "state": {
+          "none": "Keine",
+          "info": "Hinweis",
+          "warning": "Warnung",
+          "critical": "Kritisch"
+        }
+      },
+      "alert_reason": {
+        "name": "Alarmgrund",
+        "state": {
+          "none": "Keiner",
+          "crying": "Weinen",
+          "no_breathing": "Keine Atembewegung",
+          "airway_risk": "Risiko für die Atemwege",
+          "prone_position": "Bauchlage",
+          "hazard": "Lose Gegenstände im Bett",
+          "camera_view": "Kamerablick verdeckt",
+          "left_bed": "Bett verlassen",
+          "pet_in_bed": "Haustier im Bett",
+          "climate": "Raumklima",
+          "smoke": "Rauch oder CO",
+          "monitoring_failure": "Überwachung gestört",
+          "internet_down": "Kein Internet",
+          "interruption": "Überwachung war unterbrochen",
+          "test": "Testalarm"
+        }
+      },
+      "sleeping_bag": {
+        "name": "Schlafsack-Empfehlung",
+        "state": {
+          "tog_3_5": "3,5 TOG",
+          "tog_2_5_plus_layer": "2,5 TOG plus eine Schicht",
+          "tog_2_5": "2,5 TOG",
+          "tog_1_0": "1,0 TOG",
+          "tog_0_5": "0,5 TOG",
+          "tog_0_2": "0,2 TOG oder weniger"
+        }
+      },
+      "ai_assessment": {
+        "name": "KI-Bewertung",
+        "state": {
+          "ok": "Alles in Ordnung",
+          "attention": "Bitte ansehen",
+          "warning": "Warnung",
+          "critical": "Kritisch"
+        }
+      },
+      "position": {
+        "name": "Lage",
+        "state": {
+          "supine": "Rückenlage",
+          "prone": "Bauchlage",
+          "side": "Seitenlage",
+          "sitting": "Sitzt",
+          "standing": "Steht",
+          "unknown": "Unbekannt"
+        }
+      },
       "age_profile": {
         "name": "Altersprofil",
         "state": {
@@ -39,6 +318,286 @@
           "toddler": "Kleinkind"
         }
       }
+    },
+    "binary_sensor": {
+      "crying": {
+        "name": "Weinen"
+      },
+      "motion": {
+        "name": "Bewegung"
+      },
+      "in_bed": {
+        "name": "Im Bett"
+      },
+      "attended": {
+        "name": "Jemand ist beim Kind"
+      },
+      "breathing_movement": {
+        "name": "Atembewegung"
+      },
+      "alert_active": {
+        "name": "Unbeantworteter Alarm"
+      },
+      "monitoring_problem": {
+        "name": "Störung der Überwachung"
+      },
+      "ai_available": {
+        "name": "KI-Bewertung verfügbar"
+      },
+      "quiet_time": {
+        "name": "Ruhezeit"
+      },
+      "audio_relay": {
+        "name": "Ton-Weiterleitung läuft"
+      }
+    },
+    "switch": {
+      "monitoring": {
+        "name": "Überwachung"
+      },
+      "privacy_mode": {
+        "name": "Privatmodus"
+      },
+      "ai_assessment_enabled": {
+        "name": "KI-Bewertung"
+      },
+      "breathing_alert": {
+        "name": "Atembewegungs-Alarm"
+      },
+      "audio_relay_enabled": {
+        "name": "Ton-Weiterleitung"
+      }
+    },
+    "number": {
+      "cry_warning_s": {
+        "name": "Weinen bis zur Warnung"
+      },
+      "cry_critical_s": {
+        "name": "Unbeantwortetes Weinen bis kritisch"
+      },
+      "noise_margin_db": {
+        "name": "Lautstärke über dem Grundpegel"
+      },
+      "no_breathing_s": {
+        "name": "Keine Atembewegung bis zum Alarm"
+      },
+      "ai_interval_min": {
+        "name": "Abstand der KI-Routineprüfung"
+      },
+      "temp_min": {
+        "name": "Niedrigste Raumtemperatur"
+      },
+      "temp_max": {
+        "name": "Höchste Raumtemperatur"
+      }
+    },
+    "select": {
+      "mode": {
+        "name": "Modus",
+        "state": {
+          "night": "Nacht",
+          "nap": "Nickerchen",
+          "babysitter": "Babysitter"
+        }
+      },
+      "sensitivity": {
+        "name": "Empfindlichkeit",
+        "state": {
+          "low": "Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch"
+        }
+      },
+      "vital_fusion": {
+        "name": "Vitalquellen müssen übereinstimmen",
+        "state": {
+          "any": "Eine Quelle genügt",
+          "all": "Alle Quellen"
+        }
+      },
+      "on_duty": {
+        "name": "Hat Dienst",
+        "state": {
+          "all": "Alle"
+        }
+      },
+      "active_place": {
+        "name": "Aktiver Schlafplatz"
+      }
+    },
+    "button": {
+      "acknowledge": {
+        "name": "Gesehen"
+      },
+      "snooze": {
+        "name": "5 Minuten Ruhe"
+      },
+      "quick_check": {
+        "name": "Schnell-Check"
+      },
+      "assess_now": {
+        "name": "KI-Check jetzt"
+      },
+      "night_report": {
+        "name": "Nachtbericht senden"
+      },
+      "test_alert": {
+        "name": "Testalarm"
+      }
+    },
+    "event": {
+      "alert": {
+        "name": "Alarm",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "crying": "Weinen",
+              "no_breathing": "Keine Atembewegung",
+              "airway_risk": "Risiko für die Atemwege",
+              "prone_position": "Bauchlage",
+              "hazard": "Lose Gegenstände im Bett",
+              "camera_view": "Kamerablick verdeckt",
+              "left_bed": "Bett verlassen",
+              "pet_in_bed": "Haustier im Bett",
+              "climate": "Raumklima",
+              "smoke": "Rauch oder CO",
+              "monitoring_failure": "Überwachung gestört",
+              "internet_down": "Kein Internet",
+              "interruption": "Überwachung war unterbrochen",
+              "test": "Testalarm"
+            }
+          }
+        }
+      }
+    }
+  },
+  "selector": {
+    "test_level": {
+      "options": {
+        "warning": "Warnung",
+        "critical": "Kritisch"
+      }
+    }
+  },
+  "services": {
+    "acknowledge": {
+      "name": "Alarme quittieren",
+      "description": "Markiert alle aktiven Alarme als gesehen. Die Überwachung läuft weiter; ein Alarm, der sich verschlimmert, meldet sich erneut.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kind",
+          "description": "Nur nötig, wenn mehr als ein Kind eingerichtet ist."
+        }
+      }
+    },
+    "snooze": {
+      "name": "Warnungen pausieren",
+      "description": "Hält Warnungen eine Zeit lang zurück. Kritische Alarme kommen trotzdem durch.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kind",
+          "description": "Nur nötig, wenn mehr als ein Kind eingerichtet ist."
+        },
+        "minutes": {
+          "name": "Minuten",
+          "description": "Wie lange Warnungen zurückgehalten werden."
+        }
+      }
+    },
+    "test_alert": {
+      "name": "Testalarm senden",
+      "description": "Durchläuft die ganze Benachrichtigungskette, bis quittiert wird, höchstens 10 Minuten.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kind",
+          "description": "Nur nötig, wenn mehr als ein Kind eingerichtet ist."
+        },
+        "level": {
+          "name": "Stufe",
+          "description": "Ein kritischer Test prüft, ob der Alarm trotz „Nicht stören“ ertönt."
+        }
+      }
+    },
+    "start_sleep": {
+      "name": "Schlaf beginnen",
+      "description": "Markiert das Kind ab jetzt als schlafend.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kind",
+          "description": "Nur nötig, wenn mehr als ein Kind eingerichtet ist."
+        }
+      }
+    },
+    "end_sleep": {
+      "name": "Schlaf beenden",
+      "description": "Markiert das Kind ab jetzt als wach.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kind",
+          "description": "Nur nötig, wenn mehr als ein Kind eingerichtet ist."
+        }
+      }
+    },
+    "assess_now": {
+      "name": "KI-Bewertung jetzt",
+      "description": "Fragt die eingerichtete KI-Aufgabe zu einem frischen Kamerabild und gibt die Bewertung zurück.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kind",
+          "description": "Nur nötig, wenn mehr als ein Kind eingerichtet ist."
+        }
+      }
+    },
+    "quick_check": {
+      "name": "Schnell-Check",
+      "description": "Gibt zurück, wie es dem Kind gerade geht: Zustand, Alarm, Schlafdauer und eine Zusammenfassung in einem Satz.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kind",
+          "description": "Nur nötig, wenn mehr als ein Kind eingerichtet ist."
+        },
+        "with_ai": {
+          "name": "Mit KI-Bewertung",
+          "description": "Zuerst einen frischen KI-Blick einholen."
+        },
+        "notify": {
+          "name": "Als Benachrichtigung senden",
+          "description": "Die Zusammenfassung zusätzlich an die Person im Dienst senden."
+        }
+      }
+    },
+    "night_report": {
+      "name": "Nachtbericht",
+      "description": "Gibt Schlafdauer, Aufwachen und Weinen seit dem Abend zurück.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Kind",
+          "description": "Nur nötig, wenn mehr als ein Kind eingerichtet ist."
+        },
+        "notify": {
+          "name": "Als Benachrichtigung senden",
+          "description": "Die Zusammenfassung zusätzlich an die Person im Dienst senden."
+        }
+      }
+    }
+  },
+  "issues": {
+    "no_alert_target": {
+      "title": "CheckBaby kann für {child} niemanden alarmieren",
+      "description": "Es ist weder ein Handy noch ein lokaler Alarm eingerichtet. Öffne die Optionen des CheckBaby-Eintrags und wähle mindestens eines."
+    },
+    "no_sleep_place": {
+      "title": "Für {child} ist kein Schlafplatz eingerichtet",
+      "description": "Ohne Schlafplatz gibt es nichts zu überwachen. Füge dem CheckBaby-Eintrag einen hinzu."
+    },
+    "mqtt_missing": {
+      "title": "CheckBaby braucht MQTT für {child}",
+      "description": "Der Schlafplatz nutzt eine Frigate-Kamera oder die Vital-Engine, aber die MQTT-Integration ist nicht eingerichtet. Richte MQTT ein und lade CheckBaby neu."
+    }
+  },
+  "exceptions": {
+    "entry_required": {
+      "message": "Bitte das Kind wählen: Es ist kein CheckBaby-Eintrag geladen, oder mehr als einer."
     }
   }
 }

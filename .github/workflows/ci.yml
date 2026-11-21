@@ -34,5 +34,6 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # Brand images follow before v1.0 (see docs/MASTERPLAN.md).
-          ignore: brands
+          # Brand images, repository description and topics matter for the HACS
+          # default list only; they follow before v1.0 (see docs/MASTERPLAN.md).
+          ignore: brands description topics

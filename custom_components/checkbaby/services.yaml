@@ -1,0 +1,60 @@
+acknowledge:
+  fields:
+    config_entry_id: &entry
+      required: false
+      selector:
+        config_entry:
+          integration: checkbaby
+snooze:
+  fields:
+    config_entry_id: *entry
+    minutes:
+      required: false
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 120
+          unit_of_measurement: min
+test_alert:
+  fields:
+    config_entry_id: *entry
+    level:
+      required: false
+      default: critical
+      selector:
+        select:
+          translation_key: test_level
+          options:
+            - warning
+            - critical
+start_sleep:
+  fields:
+    config_entry_id: *entry
+end_sleep:
+  fields:
+    config_entry_id: *entry
+assess_now:
+  fields:
+    config_entry_id: *entry
+quick_check:
+  fields:
+    config_entry_id: *entry
+    with_ai:
+      required: false
+      default: false
+      selector:
+        boolean:
+    notify:
+      required: false
+      default: false
+      selector:
+        boolean:
+night_report:
+  fields:
+    config_entry_id: *entry
+    notify:
+      required: false
+      default: false
+      selector:
+        boolean:
