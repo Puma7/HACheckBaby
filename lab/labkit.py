@@ -156,11 +156,13 @@ def _trace_stops(core: Any) -> None:
         return
     original_stop = core.HomeAssistant.async_stop
 
-    async def traced_stop(self: Any, *args: Any, **kwargs: Any) -> Any:
+    def traced_stop(self: Any, *args: Any, **kwargs: Any) -> Any:
+        # Not a coroutine function: the stack is printed where the stop is requested,
+        # not where the event loop later runs it.
         if not getattr(self, "lab_stopping", False):
             print("Home Assistant is being stopped by:", flush=True)
             traceback.print_stack()
-        return await original_stop(self, *args, **kwargs)
+        return original_stop(self, *args, **kwargs)
 
     core.HomeAssistant.async_stop = traced_stop
     core.HomeAssistant.lab_traced = True
