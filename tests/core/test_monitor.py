@@ -435,6 +435,21 @@ def test_second_look_that_is_fine_clears_the_ai_warning() -> None:
     assert AlertKind.AIRWAY_RISK not in night.monitor.alerts.active
 
 
+def test_unsure_all_fine_does_not_take_back_an_ai_warning() -> None:
+    night = Night(ai_enabled=True)
+    night.monitor.apply_assessment(
+        _assessment(night, airway_risk="likely"), night.now, night.profile, "routine"
+    )
+    night.advance(16)
+
+    night.monitor.apply_assessment(_assessment(night, confidence=0.2), night.now, night.profile, "recheck")
+    assert night.monitor.alerts.active[AlertKind.AIRWAY_RISK].level is AlertLevel.WARNING
+
+    night.advance(5)
+    night.monitor.apply_assessment(_assessment(night, confidence=0.9), night.now, night.profile, "routine")
+    assert AlertKind.AIRWAY_RISK not in night.monitor.alerts.active
+
+
 def test_recheck_never_schedules_another_recheck() -> None:
     night = Night(ai_enabled=True, profile=AgeProfile.INFANT, ai_interval_min=600.0)
     prone = {"position": "prone"}

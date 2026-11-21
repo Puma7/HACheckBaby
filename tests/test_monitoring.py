@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
@@ -18,6 +19,7 @@ from pytest_homeassistant_custom_component.common import (
 )
 from pytest_homeassistant_custom_component.typing import MqttMockHAClient
 
+from custom_components.checkbaby.coordinator import CheckBabyCoordinator
 from custom_components.checkbaby.const import (
     CONF_AUDIO_URL,
     CONF_BED_ZONE,
@@ -498,6 +500,95 @@ async def test_downtime_while_armed_is_reported_after_restart(
 
     messages = [push["message"] for push in _real(pushes[PARENT_A])]
     assert any("interrupted for 10 min" in message for message in messages)
+
+
+async def test_state_is_saved_while_running_and_the_local_alarm_is_remembered(
+    hass: HomeAssistant,
+    mqtt_mock: MqttMockHAClient,
+    config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    pushes: Pushes,
+    local_alarm: Pushes,
+    hass_storage: dict[str, Any],
+) -> None:
+    key = f"{DOMAIN}.{config_entry.entry_id}"
+    await _start(hass, config_entry, freezer)
+    await _call_test_alert(hass)
+    await _sound(hass, freezer, 80)
+
+    # Saved by the running monitor, not only on shutdown.
+    stored = hass_storage[key]["data"]
+    assert stored["settings"]["armed"] is True
+    assert stored["last_alive"] == pytest.approx(dt_util.utcnow().timestamp(), abs=20)
+    assert stored["local_alarm_on"] is True
+    assert len(local_alarm["on"]) == 1
+
+    # After a restart the alarm that was left on can still be switched off.
+    assert await hass.config_entries.async_reload(config_entry.entry_id)
+    await hass.async_block_till_done()
+    hass.bus.async_fire("mobile_app_notification_action", {"action": f"CHECKBABY_ACK_{config_entry.entry_id}"})
+    await hass.async_block_till_done()
+    await _sound(hass, freezer, 2)
+    assert len(local_alarm["off"]) == 1
+
+
+async def _call_test_alert(hass: HomeAssistant) -> None:
+    await hass.services.async_call(DOMAIN, "test_alert", {}, blocking=True)
+
+
+async def test_without_a_sleep_place_the_state_is_unknown_and_reported(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, pushes: Pushes
+) -> None:
+    entry = make_entry(places=[])
+    await setup(hass, entry)
+    await turn_on(hass, entry, "monitoring")
+    await advance(hass, freezer, 4)
+
+    assert state_of(hass, entry, "sensor", "state") == "unknown"
+    assert entry.runtime_data.coordinator.monitor.problems == ["sleep_place"]
+    assert "no sleep place" in _real(pushes[PARENT_A])[0]["message"]
+
+
+async def test_unavailable_crying_sensor_is_a_problem(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, pushes: Pushes
+) -> None:
+    entry = make_entry(place={CONF_CRY_ENTITY: "binary_sensor.cam_cry"})
+    hass.states.async_set("binary_sensor.cam_cry", "off")
+    await setup(hass, entry)
+    await turn_on(hass, entry, "monitoring")
+    await advance(hass, freezer, 4)
+    assert state_of(hass, entry, "sensor", "state") == "asleep"
+
+    hass.states.async_set("binary_sensor.cam_cry", "unavailable")
+    await advance(hass, freezer, 4)
+    assert state_of(hass, entry, "sensor", "state") == "unknown"
+    assert entry.runtime_data.coordinator.monitor.problems == ["cry_sensor"]
+
+
+async def test_mqtt_that_comes_up_later_is_subscribed(
+    hass: HomeAssistant,
+    mqtt_mock: MqttMockHAClient,
+    config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    pushes: Pushes,
+) -> None:
+    # MQTT is not loaded yet when CheckBaby starts.
+    with patch.object(CheckBabyCoordinator, "_mqtt_available", return_value=False):
+        await setup(hass, config_entry)
+        coordinator = config_entry.runtime_data.coordinator
+        await turn_on(hass, config_entry, "monitoring")
+        await advance(hass, freezer, 2)
+        async_fire_mqtt_message(hass, f"{BASE}/audio/crying", "ON")
+        await advance(hass, freezer, 2)
+        assert "mqtt" in coordinator.monitor.problems
+        assert state_of(hass, config_entry, "binary_sensor", "crying") == "off"
+
+    await advance(hass, freezer, 4)
+    async_fire_mqtt_message(hass, f"{BASE}/audio/crying", "ON")
+    await advance(hass, freezer, 2)
+
+    assert state_of(hass, config_entry, "binary_sensor", "crying") == "on"
+    assert "mqtt" not in coordinator.monitor.problems
 
 
 async def test_issues_for_missing_mqtt_targets_and_places(hass: HomeAssistant) -> None:

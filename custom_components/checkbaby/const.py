@@ -66,6 +66,8 @@ SOURCE_CAMERA: Final = "camera"
 SOURCE_ENGINE: Final = "engine"
 SOURCE_VITAL_SENSOR: Final = "vital_sensor"
 SOURCE_NOTIFY: Final = "notify"
+SOURCE_PLACE: Final = "sleep_place"
+SOURCE_CRY_SENSOR: Final = "cry_sensor"
 
 VITAL_VIDEO: Final = "video"
 VITAL_RADAR: Final = "radar"

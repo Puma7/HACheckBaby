@@ -41,10 +41,12 @@ from .const import (
     SNOOZE_SECONDS,
     SOURCE_AUDIO,
     SOURCE_CAMERA,
+    SOURCE_CRY_SENSOR,
     SOURCE_ENGINE,
     SOURCE_FRIGATE,
     SOURCE_MQTT,
     SOURCE_NOTIFY,
+    SOURCE_PLACE,
     SOURCE_VITAL_SENSOR,
     SUBENTRY_PLACE,
     TICK_SECONDS,
@@ -63,7 +65,16 @@ from .vox import VoxAction
 
 _LOGGER = logging.getLogger(__name__)
 
-_SOURCES = (SOURCE_MQTT, SOURCE_FRIGATE, SOURCE_AUDIO, SOURCE_CAMERA, SOURCE_ENGINE, SOURCE_VITAL_SENSOR)
+_SOURCES = (
+    SOURCE_MQTT,
+    SOURCE_FRIGATE,
+    SOURCE_AUDIO,
+    SOURCE_CAMERA,
+    SOURCE_CRY_SENSOR,
+    SOURCE_ENGINE,
+    SOURCE_PLACE,
+    SOURCE_VITAL_SENSOR,
+)
 _ENGINE_VALID = ("periodic", "gross_motion", "no_motion")
 # Entities are told about a new snapshot at least this often, even if nothing changed.
 _REFRESH_SECONDS = 60.0
@@ -95,6 +106,8 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
         self._source_unsubs: list[CALLBACK_TYPE] = []
         self._unsubs: list[CALLBACK_TYPE] = []
         self._mqtt_expected = False
+        self._mqtt_subscribed = False
+        self._save_scheduled = False
         self._assessing = False
         self._last_heartbeat = 0.0
         self._last_refresh = 0.0
@@ -135,6 +148,7 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             self.settings = Settings.from_dict(stored.get("settings"))
             self.monitor = Monitor(self.settings, now)
             self.monitor.restore(stored)
+            self.notifier.local_on = bool(stored.get("local_alarm_on", False))
         if self.settings.active_place not in self.places:
             self.settings.active_place = next(iter(self.places), None)
 
@@ -163,7 +177,14 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
         await self._store.async_save(self._data_to_save())
 
     def _data_to_save(self) -> dict[str, Any]:
-        return {**self.monitor.to_dict(), "last_alive": self._now()}
+        self._save_scheduled = False
+        return {**self.monitor.to_dict(), "last_alive": self._now(), "local_alarm_on": self.notifier.local_on}
+
+    def _schedule_save(self) -> None:
+        """Save soon. A pending save is left alone: rescheduling it on every tick would postpone it forever."""
+        if not self._save_scheduled:
+            self._save_scheduled = True
+            self._store.async_delay_save(self._data_to_save, _SAVE_DELAY_SECONDS)
 
     def _update_issues(self) -> None:
         entry_id = self.config_entry.entry_id
@@ -203,8 +224,12 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             watchdog.forget(name)
         watchdog.expect(SOURCE_NOTIFY)
         self._mqtt_expected = False
+        self._mqtt_subscribed = False
         place = self.active_place
         if place is None:
+            # Nothing is being monitored, and the state must say so.
+            watchdog.expect(SOURCE_PLACE, core=True)
+            watchdog.set_healthy(SOURCE_PLACE, False, self._now())
             return
 
         watched = [
@@ -227,8 +252,11 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             watchdog.expect(SOURCE_CAMERA)
         if place.breath_rate_entity:
             watchdog.expect(SOURCE_VITAL_SENSOR)
-        if place.level_entity and not place.frigate_camera:
-            watchdog.expect(SOURCE_AUDIO, core=True)
+        if not place.frigate_camera:
+            if place.level_entity:
+                watchdog.expect(SOURCE_AUDIO, core=True)
+            if place.cry_entity:
+                watchdog.expect(SOURCE_CRY_SENSOR, core=True)
 
         if not (place.frigate_camera or place.engine_id):
             return
@@ -245,6 +273,7 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
 
         for topic, handler in self._mqtt_topics(place).items():
             self._source_unsubs.append(await mqtt.async_subscribe(self.hass, topic, self._mqtt_callback(handler)))
+        self._mqtt_subscribed = True
 
     def _mqtt_callback(self, handler: Callable[[str, float], None]) -> Callable[[Any], None]:
         @callback
@@ -366,8 +395,12 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             monitor.set_presence(self._is_on(place.presence_entity), now)
         if place.door_entity and (door := self._is_on(place.door_entity)) is not None:
             signals.door_open.set(door, now)
-        if place.cry_entity and (crying := self._is_on(place.cry_entity)) is not None:
-            signals.crying.set(crying, now)
+        if place.cry_entity:
+            crying = self._is_on(place.cry_entity)
+            if crying is not None:
+                signals.crying.set(crying, now)
+            if not place.frigate_camera:
+                watchdog.set_healthy(SOURCE_CRY_SENSOR, crying is not None, now)
         if place.motion_entity and (motion := self._is_on(place.motion_entity)) is not None:
             monitor.set_motion(motion, now)
         if place.level_entity and not place.frigate_camera:
@@ -411,6 +444,12 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
         if self._stopping:
             return
         now = self._now()
+        if self._mqtt_expected and not self._mqtt_subscribed and self._mqtt_available():
+            # MQTT came up after this entry started: subscribe now.
+            self._mqtt_subscribed = True
+            self.config_entry.async_create_background_task(
+                self.hass, self._async_subscribe_sources(), f"{DOMAIN} subscribe"
+            )
         self._poll_entities(now)
         self.monitor.tick(now, self.profile)
 
@@ -440,7 +479,7 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
         if snapshot != self.data or now - self._last_refresh >= _REFRESH_SECONDS:
             self._last_refresh = now
             self.async_set_updated_data(snapshot)
-        self._store.async_delay_save(self._data_to_save, _SAVE_DELAY_SECONDS)
+        self._schedule_save()
 
     def _day_and_night_start(self) -> tuple[float, float]:
         """Local midnight, and the most recent 18:00."""

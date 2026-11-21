@@ -128,6 +128,9 @@ class AlertManager:
             return
 
         alert.detail = detail
+        if alert.shadow and shadow:
+            alert.level = level
+            return
         if alert.shadow and not shadow:
             # The alert was only being recorded and is now switched live.
             alert.shadow = False
@@ -137,7 +140,11 @@ class AlertManager:
             if level >= AlertLevel.WARNING:
                 self._push(alert, Stage.FIRST, now)
             return
-        alert.shadow = shadow
+        if shadow:
+            # A live alert was switched to record-only: take it off the phones first.
+            self.clear(kind, now)
+            self.active[kind] = Alert(kind, level, detail, raised_at=now, level_since=now, shadow=True)
+            return
         if level > alert.level:
             alert.level = level
             alert.level_since = now
@@ -147,6 +154,10 @@ class AlertManager:
             if not shadow and level >= AlertLevel.WARNING:
                 self._push(alert, Stage.UPGRADE, now)
         elif level < alert.level:
+            if alert.notified and level < AlertLevel.WARNING <= alert.level:
+                # No longer worth a notification: remove the one that is showing.
+                alert.notified = False
+                self._out.append(Notification(kind, alert.level, Stage.CLEARED, Audience.ALL, alert.detail))
             alert.level = level
 
     def clear(self, kind: AlertKind, now: float) -> None:

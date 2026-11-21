@@ -34,7 +34,8 @@ class Notifier:
         """Bind to one child."""
         self._hass = hass
         self._coordinator = coordinator
-        self._local_on = False
+        # Remembered across restarts, so that an alarm left on can still be switched off.
+        self.local_on = False
 
     @property
     def _options(self) -> dict[str, Any]:
@@ -108,9 +109,9 @@ class Notifier:
 
     async def _async_local(self, on: bool) -> None:
         entities = list(self._options.get(CONF_LOCAL_ALARM, []))
-        if not entities or on == self._local_on:
+        if not entities or on == self.local_on:
             return
-        self._local_on = on
+        self.local_on = on
         try:
             await self._hass.services.async_call(
                 "homeassistant", "turn_on" if on else "turn_off", {"entity_id": entities}, blocking=True

@@ -233,15 +233,41 @@ def test_clear_tells_the_phones_only_if_they_were_told() -> None:
     assert _stages(manager) == [Stage.CLEARED]
 
 
-def test_lower_level_is_taken_over_silently() -> None:
+def test_alert_that_drops_to_a_hint_is_taken_off_the_phones() -> None:
     manager = AlertManager()
     manager.raise_alert(AlertKind.CLIMATE, AlertLevel.WARNING, {}, T0)
     manager.drain()
 
     manager.raise_alert(AlertKind.CLIMATE, AlertLevel.INFO, {}, T0 + 5)
 
-    assert manager.drain() == []
+    assert _stages(manager) == [Stage.CLEARED]
     assert manager.level is AlertLevel.INFO
+    manager.clear(AlertKind.CLIMATE, T0 + 6)
+    assert manager.drain() == []  # nothing left to clear
+
+
+def test_critical_that_drops_to_warning_stays_on_the_phones() -> None:
+    manager = AlertManager()
+    manager.raise_alert(AlertKind.MONITORING_FAILURE, AlertLevel.CRITICAL, {}, T0)
+    manager.drain()
+    manager.raise_alert(AlertKind.MONITORING_FAILURE, AlertLevel.WARNING, {}, T0 + 5)
+    assert manager.drain() == []
+    assert manager.level is AlertLevel.WARNING
+
+
+def test_live_alert_switched_to_shadow_is_taken_off_the_phones() -> None:
+    manager = AlertManager()
+    manager.raise_alert(AlertKind.NO_BREATHING, AlertLevel.CRITICAL, {}, T0)
+    manager.drain()
+
+    manager.raise_alert(AlertKind.NO_BREATHING, AlertLevel.CRITICAL, {}, T0 + 5, shadow=True)
+
+    assert _stages(manager) == [Stage.CLEARED]
+    assert manager.level is AlertLevel.NONE
+    assert manager.active[AlertKind.NO_BREATHING].shadow is True
+    manager.raise_alert(AlertKind.NO_BREATHING, AlertLevel.CRITICAL, {"sources": ["radar"]}, T0 + 6, shadow=True)
+    manager.tick(T0 + 100)
+    assert manager.drain() == []
 
 
 def test_alerts_survive_a_round_trip() -> None:

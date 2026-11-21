@@ -10,7 +10,7 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Any
 
-from .ai_policy import evaluate_assessment, needs_recheck
+from .ai_policy import MIN_CONFIDENCE, evaluate_assessment, needs_recheck
 from .ai_schema import Assessment
 from .alerts import AlertManager, AlertTimes, Notification
 from .profiles import AgeProfile
@@ -244,9 +244,14 @@ class Monitor:
             if is_new:
                 self._log("alert", now, kind=item.kind.value, level=int(item.level), source="ai")
         for kind in AI_KINDS - wanted:
-            if kind in self.alerts.active:
-                self.alerts.clear(kind, now)
-                self._log("alert_cleared", now, kind=kind.value)
+            existing = self.alerts.active.get(kind)
+            if existing is None:
+                continue
+            # An unsure look is not enough to take back a warning.
+            if existing.level >= AlertLevel.WARNING and assessment.confidence < MIN_CONFIDENCE:
+                continue
+            self.alerts.clear(kind, now)
+            self._log("alert_cleared", now, kind=kind.value)
         # One confirming look, never a loop of rechecks.
         if reason != "recheck" and needs_recheck(desired):
             self._recheck_at = now + RECHECK_AFTER_S

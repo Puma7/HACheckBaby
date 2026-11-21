@@ -157,12 +157,9 @@ class Signals:
 
     def distress(self, cry_confirm_s: float, scream_confirm_s: float, now: float) -> bool:
         """Crying or screaming long enough to count."""
-        return (
-            self.crying.active_for(now) >= cry_confirm_s
-            and self.crying.active
-            or self.scream.active
-            and self.scream.active_for(now) >= scream_confirm_s
-        )
+        crying = self.crying.active and self.crying.active_for(now) >= cry_confirm_s
+        screaming = self.scream.active and self.scream.active_for(now) >= scream_confirm_s
+        return crying or screaming
 
     def distress_for(self, now: float) -> float:
         """Seconds of uninterrupted crying or screaming."""
