@@ -18,6 +18,7 @@ import socket
 import subprocess
 import sys
 import time
+import traceback
 from typing import Any
 
 import aiohttp
@@ -141,6 +142,17 @@ async def boot(config_dir: Path, http_port: int, *, frontend: bool = False) -> A
         raise RuntimeError("Home Assistant did not boot")
     await hass.async_start()
     await hass.async_block_till_done()
+
+    # If anything but the lab stops Home Assistant, say who it was.
+    original_stop = hass.async_stop
+
+    async def traced_stop(*args: Any, **kwargs: Any) -> Any:
+        if not getattr(hass, "lab_stopping", False):
+            print("Home Assistant is being stopped by:", flush=True)
+            traceback.print_stack()
+        return await original_stop(*args, **kwargs)
+
+    hass.async_stop = traced_stop
     return hass
 
 

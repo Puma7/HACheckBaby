@@ -145,6 +145,7 @@ async def main(http_port: int, broker_port: int) -> None:
                 print(f"{type(error).__name__}: {error}")
     finally:
         sim.stop()
+        hass.lab_stopping = True
         await hass.async_stop()
         broker.stop()
 

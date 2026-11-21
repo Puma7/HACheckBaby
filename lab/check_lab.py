@@ -184,6 +184,7 @@ class Run:
             await self.api.__aexit__()
             self.api = None
         if self.hass is not None:
+            self.hass.lab_stopping = True
             await self.hass.async_stop()
             self.hass = None
 
