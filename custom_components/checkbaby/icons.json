@@ -1,0 +1,192 @@
+{
+  "entity": {
+    "sensor": {
+      "state": {
+        "default": "mdi:baby-face-outline",
+        "state": {
+          "asleep": "mdi:sleep",
+          "crying": "mdi:emoticon-cry-outline",
+          "awake": "mdi:baby-face",
+          "restless": "mdi:waves",
+          "empty": "mdi:bed-empty",
+          "attended": "mdi:human-baby-changing-table",
+          "unknown": "mdi:help-circle-outline"
+        }
+      },
+      "alert_level": {
+        "default": "mdi:bell-outline",
+        "state": {
+          "warning": "mdi:bell-alert",
+          "critical": "mdi:alarm-light"
+        }
+      },
+      "alert_reason": {
+        "default": "mdi:bell-badge-outline"
+      },
+      "noise_level": {
+        "default": "mdi:volume-high"
+      },
+      "noise_floor": {
+        "default": "mdi:volume-low"
+      },
+      "last_motion": {
+        "default": "mdi:motion-sensor"
+      },
+      "asleep_since": {
+        "default": "mdi:clock-start"
+      },
+      "last_sleep_duration": {
+        "default": "mdi:timer-outline"
+      },
+      "sleep_today": {
+        "default": "mdi:sleep"
+      },
+      "crying_today": {
+        "default": "mdi:emoticon-cry-outline"
+      },
+      "wakeups_tonight": {
+        "default": "mdi:weather-night"
+      },
+      "breathing_rate": {
+        "default": "mdi:lungs"
+      },
+      "heart_rate": {
+        "default": "mdi:heart-pulse"
+      },
+      "sleeping_bag": {
+        "default": "mdi:hanger"
+      },
+      "ai_assessment": {
+        "default": "mdi:eye-check-outline"
+      },
+      "position": {
+        "default": "mdi:human"
+      },
+      "monitoring_problems": {
+        "default": "mdi:alert-circle-outline"
+      },
+      "ai_calls_last_hour": {
+        "default": "mdi:counter"
+      },
+      "age_profile": {
+        "default": "mdi:cake-variant-outline"
+      }
+    },
+    "binary_sensor": {
+      "attended": {
+        "default": "mdi:account-child"
+      },
+      "breathing_movement": {
+        "default": "mdi:lungs"
+      },
+      "quiet_time": {
+        "default": "mdi:volume-off"
+      },
+      "audio_relay": {
+        "default": "mdi:speaker-wireless"
+      }
+    },
+    "switch": {
+      "monitoring": {
+        "default": "mdi:shield-check"
+      },
+      "privacy_mode": {
+        "default": "mdi:eye-off"
+      },
+      "ai_assessment_enabled": {
+        "default": "mdi:eye-check-outline"
+      },
+      "breathing_alert": {
+        "default": "mdi:lungs"
+      },
+      "audio_relay_enabled": {
+        "default": "mdi:speaker-wireless"
+      }
+    },
+    "number": {
+      "cry_warning_s": {
+        "default": "mdi:timer-alert-outline"
+      },
+      "cry_critical_s": {
+        "default": "mdi:timer-alert"
+      },
+      "noise_margin_db": {
+        "default": "mdi:volume-plus"
+      },
+      "no_breathing_s": {
+        "default": "mdi:timer-sand"
+      },
+      "ai_interval_min": {
+        "default": "mdi:timer-cog-outline"
+      }
+    },
+    "select": {
+      "mode": {
+        "default": "mdi:weather-night"
+      },
+      "sensitivity": {
+        "default": "mdi:tune"
+      },
+      "vital_fusion": {
+        "default": "mdi:set-all"
+      },
+      "on_duty": {
+        "default": "mdi:account-clock"
+      },
+      "active_place": {
+        "default": "mdi:bed"
+      }
+    },
+    "button": {
+      "acknowledge": {
+        "default": "mdi:check-bold"
+      },
+      "snooze": {
+        "default": "mdi:bell-sleep"
+      },
+      "quick_check": {
+        "default": "mdi:baby-face-outline"
+      },
+      "assess_now": {
+        "default": "mdi:eye-refresh-outline"
+      },
+      "night_report": {
+        "default": "mdi:file-chart-outline"
+      },
+      "test_alert": {
+        "default": "mdi:bell-ring"
+      }
+    },
+    "event": {
+      "alert": {
+        "default": "mdi:bell-alert"
+      }
+    }
+  },
+  "services": {
+    "acknowledge": {
+      "service": "mdi:check-bold"
+    },
+    "snooze": {
+      "service": "mdi:bell-sleep"
+    },
+    "test_alert": {
+      "service": "mdi:bell-ring"
+    },
+    "start_sleep": {
+      "service": "mdi:sleep"
+    },
+    "end_sleep": {
+      "service": "mdi:sleep-off"
+    },
+    "assess_now": {
+      "service": "mdi:eye-refresh-outline"
+    },
+    "quick_check": {
+      "service": "mdi:baby-face-outline"
+    },
+    "night_report": {
+      "service": "mdi:file-chart-outline"
+    }
+  }
+}

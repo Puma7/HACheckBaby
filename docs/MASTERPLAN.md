@@ -1,6 +1,6 @@
 # HACheckBaby – Masterplan
 
-Stand: 21.11.2026 (dritte Fassung: Entscheidungen eingearbeitet, Hardware, Einrichtung und zweite Ideenrunde ergänzt) · Status: Phase 0 läuft. Das Repo-Gerüst steht (installierbare Integration, Tests, CI); die Prüfungen am echten System stehen aus, siehe [Checkliste](development/phase-0-checkliste.md)
+Stand: 21.11.2026 (vierte Fassung: mit Umsetzungsstand) · Status: Die Software ist geschrieben und automatisch getestet, aber noch nie an echter Hardware gelaufen. Was fertig ist und was fehlt, steht in [Abschnitt 11](#11-umsetzungsstand); die Prüfungen am echten System in der [Checkliste](development/phase-0-checkliste.md)
 
 Ein lokales, smartes Babyphone für Home Assistant, das auf Frigate aufsetzt und über HACS installiert wird. Es soll alles können, was ein klassisches Babyphone kann, und darüber hinaus die Lage im Bett bewerten: nicht nur „es bewegt sich etwas" oder „es ist laut", sondern „geht es dem Kind gut?".
 
@@ -580,3 +580,64 @@ Szenario-Labor (Compose mit HA, Mosquitto, Frigate und go2rtc, das Testvideos al
 - [localsmarthomeguide: Local baby monitor setup with Frigate and RTSP](https://localsmarthomeguide.com/articles/local-baby-monitor-setup-with-frigate-and-rtsp/) (vom Projektinhaber als Text bereitgestellt)
 
 Hinweis zur Recherche: Der HA-Blogartikel von 2017 und der techdout-Artikel waren aus der Arbeitsumgebung nicht direkt abrufbar; ihr Inhalt ist über Suchergebnisse bzw. den mitgelieferten Reddit-Thread abgedeckt. Angaben zu Frigate, `ai_task`, lokalem Push und den Radarmodulen stammen aus Dokumentation und Suchergebnissen und werden in Phase 0 am laufenden System überprüft. Für Radarmodule an Säuglingen gibt es keine Herstellerangaben; hier zählt nur die eigene Messung.
+
+---
+
+## 11. Umsetzungsstand
+
+Stand 21.11.2026. „Getestet" heißt hier: durch automatische Tests abgedeckt, die gegen Home Assistant 2026.2 und 2026.10 laufen. **Nichts davon ist bisher an einer echten Kamera, einem echten Frigate, einem Handy oder einem Radarsensor gelaufen.** Die MQTT-Themen, das Format der Push-Nachrichten und der Aufruf der KI stammen aus Dokumentation und Recherche; ob sie an deinem System genau so stimmen, zeigt erst die Checkliste.
+
+### Umgesetzt und getestet
+
+| Bereich | Was es tut |
+|---|---|
+| Einrichtung | Dialog für Kind, ersten Schlafplatz, Benachrichtigungsziele und Zweckbestimmung; weitere Schlafplätze als Untereinträge; Optionen; Reparaturhinweise bei fehlendem Ziel, fehlendem Schlafplatz, fehlendem MQTT |
+| Quellen | Frigate über MQTT (Weinen, Schrei, Pegel, Bewegung, Person, Katze/Hund in der Bett-Zone, Verfügbarkeit); alternativ Entitäten für Weinen, Bewegung und Pegel; Präsenz, Türkontakt, Raumklima, Rauch/CO, Internet |
+| Zustand | Leer, schläft, unruhig, wach, weint, betreut, unbekannt; Übergänge nach Dauer, nicht nach Einzelereignis |
+| Alarme | Hinweis, Warnung, kritisch; Wiederholung, Eskalation an alle, lokaler Alarmkanal, Quittieren, Schlummern, Sperrzeit; alle Regeln der Eskalationsmatrix aus 5.4 |
+| Benachrichtigung | Push mit Bild und Knöpfen für iOS und Android in einer Nachricht, kritische Alarme mit Durchbruch durch „Nicht stören"; „Wer hat Dienst"; Babysitter-Modus |
+| Ausfallüberwachung | Jede Quelle einzeln, flaches Mikrofon, fehlendes Benachrichtigungsziel; Meldung nach Unterbrechung und beim Herunterfahren; Herzschlag-Tasten für einen Dead-Man-Summer |
+| Geräusch-Grundlinie | Lernt den Raumpegel, auch ein dauerhaft laufendes weißes Rauschen |
+| KI-Bewertung | Aufruf über `ai_task` mit Kamerabild und festem Antwortschema; Ausweichkette, Zeitlimit, Stundenbudget, Einwilligung; alle Leitplanken aus 5.5 |
+| Atembewegungs-Hinweis | Regel mit Radar-Entität und Vital-Engine als Quellen, Fusion, Schattenmodus, Untergrenze 20 s |
+| Komfort | Ton-Weiterleitung auf einen Lautsprecher (VOX), Schlafsack-Empfehlung, Ruhezeit-Sensor für eigene Automationen, Privatmodus, mehrere Schlafplätze |
+| Auswertung | Schlafprotokoll, Aufwachen, Weinzeit, Schnell-Check und Nachtbericht als Knopf und als Aktion mit Rückgabewerten |
+| Betrieb | Einstellungen, Alarme und Schlafprotokoll überstehen Neustarts; Diagnose-Download ohne Daten des Kindes; Ereignisprotokoll jeder Entscheidung |
+
+### Geschrieben, aber nur eingeschränkt prüfbar
+
+- **Vital-Engine** (`engine/`): eigener Dienst für die Atem-Mikrobewegung aus dem Videobild. Die Signalverarbeitung ist mit künstlichen Signalen getestet; gegen einen echten Kamerastream, als Container und als Add-on ist sie ungeprüft. Details in `engine/README.md`.
+- **Beispiele** (`docs/examples/`, `blueprints/`): Dashboard, Frigate-Konfiguration, ESPHome für Radar und Dead-Man-Summer, Automations-Vorlagen. Syntaktisch geprüft, nie auf einem Gerät gelaufen.
+
+### Abweichungen vom Plan
+
+- **Schrei** zählt wie Weinen mit kürzerer Bestätigungszeit und wird nicht sofort kritisch. Sonst würde heftiges Weinen ständig kritische Alarme auslösen; kritisch wird es über die Regel „unbeantwortet seit drei Minuten".
+- **KI bekommt ein Einzelbild**, keine Bildserie. `ai_task` liefert pro Kamera nur das aktuelle Bild. Die Bestätigung läuft über einen zweiten Blick nach 15 Sekunden.
+- **Bauchlage** wird nur beim Neugeborenen nach Bestätigung kritisch, beim Säugling bleibt sie eine Warnung, weil sich ältere Säuglinge selbst drehen dürfen.
+- **Ein unsicheres „alles in Ordnung" der KI** nimmt eine KI-Warnung nicht zurück.
+- **Mindestversion** ist Home Assistant 2026.2, weil gegen ältere Versionen nicht getestet wird.
+
+### Noch nicht umgesetzt
+
+| Punkt aus dem Plan | Stand |
+|---|---|
+| Prüfungen am echten System (Phase 0) | Offen, brauchen deine Hardware |
+| Geführter Funktionstest im Einrichtungsdialog | Nicht gebaut; es gibt den Testalarm-Knopf und die Checkliste |
+| Warnung *vor* einem Update oder Neustart | Nicht gebaut; gemeldet wird beim Herunterfahren und nach der Unterbrechung |
+| Kalibrier-Assistent für Schwellen | Nicht gebaut; die Grundlinie lernt selbst |
+| Sprachbefehl „Wie geht es dem Kind?" | Nicht als eigener Befehl; die Aktion `quick_check` lässt sich in ein Skript für den Sprachassistenten legen |
+| Husten-Erkennung, Meilenstein „dreht sich", Spucken | Nicht gebaut |
+| Eigene Dashboard-Karte | Nicht gebaut; es gibt ein Beispiel-Dashboard aus Standardkarten |
+| Baby-Buddy-Anbindung, Schnell-Protokoll, Export, Erinnerungsalbum, Wachfenster, Dienst-Statistik | Nicht gebaut |
+| Raumklima aktiv regeln, Nachtlicht, Einschlafhilfe | Nicht gebaut; der Ruhezeit-Sensor und das Alarm-Ereignis sind die Bausteine für eigene Automationen |
+| Telefonanruf als Eskalation, Smartwatch, Fernseher | Nicht gebaut |
+| Modell-Vergleich mit eigenem Szenensatz | Nicht gebaut; braucht echte Bilder vom Schlafplatz |
+| Szenario-Labor mit echtem Frigate | Nicht gebaut |
+| Roh-Radar mit eigener Auswertung | Nicht gebaut, laut Plan nur falls die fertigen Sensoren nicht tragen |
+| Markenbilder, HACS-Standardliste, rechtliche Prüfung | Vor v1.0 |
+
+### Was als Nächstes zählt
+
+1. Checkliste am echten System durchgehen. Sie entscheidet, ob MQTT-Themen, Push-Format und KI-Aufruf stimmen.
+2. Zwei Wochen Parallelbetrieb neben einem gekauften Babyphone, mit ausgeschaltetem Atembewegungs-Alarm.
+3. Erst danach Schwellen anpassen und über den Atembewegungs-Alarm entscheiden.
