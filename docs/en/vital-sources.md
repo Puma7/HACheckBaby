@@ -32,7 +32,7 @@ The field **Heart rate sensor (radar)** is displayed as "Heart rate (estimate)" 
 
 The vital engine is a separate program in the folder `engine/` of the repository. It reads the camera's low-resolution stream, looks at a region over the child's upper body and publishes whether it sees a periodic movement in the range of breathing. It runs outside Home Assistant on purpose: decoding video inside Home Assistant would put your whole home automation at risk if it fails.
 
-Its signal processing has been tested with artificial signals only. It has not been run against a real camera stream, as a container or as an add-on.
+Its signal processing has been tested with artificial signals only. It has never seen a real camera, a real room or a real child, and its thresholds are tuned on artificial data. Packaging it as a Home Assistant add-on is untested. How to run it, what exactly was tested and its own list of limits are in [`engine/README.md`](../../engine/README.md).
 
 Enter the engine's ID under **Vital engine ID** in the sleep place. CheckBaby then subscribes to two MQTT topics. The prefix `checkbaby/engine` is fixed in the integration, so leave the engine's `topic_prefix` at its default.
 
@@ -111,7 +111,8 @@ Newborns breathe irregularly. Pauses of up to about ten seconds are part of norm
 - **An empty bed looks like a child that does not move.** A radar that reports zero and an engine that reports `no_motion` say the same for both. If you lift the child out and leave the room while Monitoring is on, the rule can hold about 20 seconds after you have gone. A door contact only pauses it while the door is open and for 20 seconds after. Only a presence sensor for the bed tells CheckBaby that the bed is empty; without one, switch Monitoring off or privacy mode on when you take the child out. What the radar modules actually report for an empty bed has not been measured.
 - **A pan-tilt camera that was moved** no longer shows the region the engine was set up for.
 - **A moving pet, a curtain or a parent's arm** can count as a sign of life.
-- **Every source can be late.** The rule adds its 20 seconds or more on top of whatever delay the source has.
+- **Every source can be late.** The rule adds its 20 seconds or more on top of whatever delay the source has. The vital engine judges a window of up to 25 seconds, so it reports `no_motion` only some time after a movement has stopped; according to its README the hint can be 40 seconds or more behind the event.
+- **The vital engine only reports rates between 18 and 90 per minute** as breathing movement, and after any larger movement it reports `gross_motion` for about 12 seconds before it can judge again.
 
 ## Hardware notes
 

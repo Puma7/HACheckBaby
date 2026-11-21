@@ -118,4 +118,8 @@ The examples use a child named "baby". Your IDs contain your child's name, and o
 
 ## The local alarm does not switch off
 
-The local alarm is switched off when no warning or critical alert is unanswered any more. "Quiet for 5 min" does not do that; tap "Seen". If a siren stays on after that, switch it off by hand and send the diagnostics.
+The local alarm is switched off when no warning or critical alert is unanswered any more. "Quiet for 5 min" does not do that; tap "Seen".
+
+There is a known problem in this version: after "Quiet for 5 min" on a warning whose local alarm was already on, the local alarm stays on even when the cause has ended and no alert is active. "Seen" has nothing to acknowledge then. Switch the alarm off by hand, or press "Test alert" and then "Seen", which switches it off.
+
+If a siren stays on in any other situation, switch it off by hand and send the diagnostics.

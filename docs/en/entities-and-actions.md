@@ -22,7 +22,7 @@ In automations and dashboards, check the real IDs on the device page before you 
 | Sound level | `sensor.baby_sound_level` | Latest sound level in dBFS. |
 | Learned noise floor | `sensor.baby_learned_noise_floor` | Diagnostic. The learned level of the room in dBFS. |
 | Last movement | `sensor.baby_last_movement` | Time of the last movement reported. |
-| Asleep since | `sensor.baby_asleep_since` | Start of the current sleep; unknown while the child is not asleep. |
+| Asleep since | `sensor.baby_asleep_since` | Start of the current sleep. The sleep ends when the state becomes "Awake", "Crying", "Attended" or "Not in bed"; it keeps running while the state is "Unknown", so sleep times include stretches without a usable signal. |
 | Last sleep | `sensor.baby_last_sleep` | Length of the last finished sleep in minutes. |
 | Sleep today | `sensor.baby_sleep_today` | Hours asleep since midnight. |
 | Crying today | `sensor.baby_crying_today` | Minutes in the state "Crying" since midnight. |

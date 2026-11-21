@@ -64,7 +64,7 @@ A sleep place is one bed with its camera and sensors. You need a name and a soun
 
 | Field | What to enter |
 |---|---|
-| Phones | The notify services of the companion app, for example `mobile_app_anna_iphone`. The list offers every service that starts with `mobile_app_`; you can type another notify service name. |
+| Phones | The notify services of the companion app, for example `mobile_app_annas_iphone`. The list offers every service that starts with `mobile_app_`; you can type another notify service name. |
 | Local alarm (siren, light, switch) | Switched on when an alert stays unanswered for a minute, or at once while the internet is down. Put it where you sleep, never in the child's room. |
 
 You must choose at least one phone or one local alarm. Without either, no alert could reach anyone.

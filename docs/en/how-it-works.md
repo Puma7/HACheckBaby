@@ -119,6 +119,7 @@ The repeat to all phones after 180 seconds coincides with the step to critical h
 
 - Warnings that are showing are removed from the phones; new warnings are not sent.
 - A local alarm that is already on stays on, and the binary sensor "Unanswered alert" stays on. Only "Seen" switches the local alarm off.
+- **Known problem in this version:** if you choose "Quiet for 5 min" after the local alarm has come on, and the cause then ends by itself during the quiet time, the local alarm is not switched off at all. Once the local alarm is on, use "Seen". If it is left on, switch it off by hand, or press "Test alert" and then "Seen".
 - When the time is over, warnings that are still active and unanswered are sent.
 - **Critical alerts come through regardless.** That includes a crying warning that turns critical: if the crying started more than 180 seconds ago and nobody acknowledged it, the critical alert arrives during the quiet time. If you have heard the child and do not want that, use "Seen" instead.
 
