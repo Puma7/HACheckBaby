@@ -1,6 +1,6 @@
 # HACheckBaby – Masterplan
 
-Stand: 21.11.2026 (zweite Fassung, Entscheidungen des Projektinhabers eingearbeitet) · Status: Planungsphase, noch kein Code
+Stand: 21.11.2026 (dritte Fassung: Entscheidungen eingearbeitet, Hardware, Einrichtung und zweite Ideenrunde ergänzt) · Status: Planungsphase, noch kein Code
 
 Ein lokales, smartes Babyphone für Home Assistant, das auf Frigate aufsetzt und über HACS installiert wird. Es soll alles können, was ein klassisches Babyphone kann, und darüber hinaus die Lage im Bett bewerten: nicht nur „es bewegt sich etwas" oder „es ist laut", sondern „geht es dem Kind gut?".
 
@@ -104,13 +104,41 @@ Daraus folgt für uns:
 
 **Rahmenbedingungen dieses Projekts**
 
-- Frigate-Rechner mit drei Außenkameras ist vorhanden; für das Kind kommt eine Innenkamera dazu (Reolink oder UniFi/Ubiquiti). Netzteil statt Akku, RTSP und Ton am konkreten Modell vor dem Kauf prüfen.
+- Frigate-Rechner mit drei Außenkameras und Grafikeinheit ist vorhanden. Ob sie für ein lokales Bildmodell reicht, hängt von Typ und Grafikspeicher ab (eine integrierte Grafik genügt für Frigate, aber nicht für ein Bildmodell in brauchbarer Zeit); das wird in Phase 0 geklärt. Für das Kind kommt eine Innenkamera dazu, siehe Hardware unten.
 - Das Kind kommt im Februar 2027 zur Welt, das System startet also mit einem **Neugeborenen**. Das hat Folgen:
   - In den ersten Monaten schläft das Kind empfohlenermaßen im Elternschlafzimmer (Beistellbett). Die Kamera hängt dann im Schlafzimmer der Eltern: Privatmodus per Taste und Zeitplan, kurze oder keine Aufzeichnung für diese Kamera. Hauptnutzen in dieser Zeit: abends und bei Tagschläfchen, wenn die Eltern in einem anderen Raum sind.
   - Mehrere Schlafplätze (Beistellbett, Stubenwagen im Wohnzimmer, später Kinderzimmer). Das Datenmodell ist deshalb „ein Kind, mehrere Schlafplätze", jeder mit eigener Kamera und eigenen Sensoren; der aktive Platz wird gewählt oder automatisch erkannt.
   - Neugeborene atmen unregelmäßig; Pausen bis etwa 10 Sekunden sind normal. Der Atem-Hinweis darf deshalb nicht unter 20 Sekunden auslösen und braucht den Schattenmodus besonders dringend.
   - Pucksack und Schlafsack verdecken Bewegung. Das schwächt die Videoerkennung und spricht für den Radarsensor als zweite Quelle.
   - Bis zur Geburt gibt es kein Kind zum Testen. Geprüft wird mit Puppe, Lautsprecher (Weinaufnahmen) und einem einfachen Atemsimulator; die Feinabstimmung folgt mit echten Daten im Schattenmodus.
+
+**Hardware**
+
+Kamera-Kandidaten (alle günstig, WLAN, Netzteil). Nicht jedes Modell einer Marke kann RTSP; entscheidend ist das genaue Modell.
+
+| Kandidat | RTSP und Ton | Gegensprechen | Hinweise |
+|---|---|---|---|
+| UniFi G3 Instant (kleine WLAN-Kamera von Ubiquiti) | Über die Protect-Konsole, nicht direkt von der Kamera; in go2rtc als `rtspx://` | Nur in der Protect-App | 1080p, 111° Weitwinkel, Infrarot bis 6 m. Die Konsole wird Teil der Alarmkette und muss vom Watchdog mit überwacht werden. |
+| Reolink E1 Pro / E1 Zoom (Schwenkkopf) | Direkt, Ton als AAC | Über go2rtc, modellabhängig | **Kauffalle:** Die einfache Reolink E1 kann RTSP/ONVIF nicht direkt, nur über Hub oder NVR. |
+| TP-Link Tapo C200 / C210 / C120 | Direkt nach Aktivierung in der App | Über go2rtc (`tapo://`), je nach Firmware | Günstig; die App drängt zur Cloud, lässt sich aber ignorieren. |
+| Eufy Innenkamera mit Schwenkkopf | Unklar | Unklar | Keine belastbaren Berichte mit Frigate gefunden. Nicht ohne eigenen Test kaufen. |
+
+Auswahl in Phase 0 nach vier Kriterien, am besten im direkten Vergleich von zwei Kameras: (1) Ton im Stream, den Frigate auswerten kann, (2) Infrarotbild aus etwa 1 m Abstand ohne Überstrahlen, (3) Verzögerung von Bild und Ton, (4) Stabilität über 14 Tage.
+
+Schwenkkopf: praktisch für mehrere Schlafplätze, aber nach jedem Schwenk stimmen Bett-Zone und Bildausschnitt der Atemerkennung nicht mehr. Deshalb fester Preset „Bett", und der Watchdog erkennt einen verstellten Blickwinkel.
+
+Stückliste für den Vollausbau:
+
+| Teil | Zweck | Phase |
+|---|---|---|
+| Innenkamera mit RTSP und Ton | Bild, Ton, Frigate-Erkennung | 0 |
+| Türkontakt | „Jemand ist im Zimmer", später Kleinkind-Alarm | 1 |
+| Sirene oder Lautsprecher im Elternschlafzimmer | Lokaler Alarmkanal ohne Internet | 1 |
+| Temperatur-/Feuchtesensor | Raumklima | 1 |
+| Seeed MR60BHA2 | Lokale Vitalquelle (Atmung, Puls) | 0 bestellen, 3 auswerten |
+| Aqara FP2 | Lokale Präsenz/Zone, Vitaldaten experimentell über Cloud | 0 bestellen, 3 auswerten |
+| ESP32 mit Summer | Dead-Man-Warnung, wenn Home Assistant ausfällt | 3 |
+| USV für Server, Switch und Router (optional) | Überbrückt kurze Stromausfälle | beliebig |
 
 ---
 
@@ -221,23 +249,25 @@ Zustände: `leer` · `schläft` · `unruhig` · `wach` · `weint` · `betreut` (
 
 ### 5.7 mmWave-Radar als zweite Vitalquelle
 
-**Frage: fertigen Aqara-Sensor nehmen oder selbst bauen? Empfehlung: selbst bauen, mit Bauanleitung.**
+**Entschieden: Aqara FP2 und Seeed MR60BHA2 werden beide eingeplant und im Schattenmodus gegeneinander und gegen die Videoerkennung verglichen.** Der MR60BHA2 ist die lokale Vitalquelle mit Bauanleitung, der FP2 liefert lokal Präsenz und experimentell Vitaldaten.
 
 | Sensor | Liefert Atmung/Puls? | Weg nach Home Assistant | Bewertung für uns |
 |---|---|---|---|
-| Aqara FP2 | Ja, im Schlafmodus (Atemrate, Herzrate, Schlafphase) | Lokal (HomeKit) kommt nur Präsenz an. Vitaldaten liegen in der Aqara-Cloud; ein Community-Add-on (SleepRadar) liest sie von dort aus | Nicht als Basis: Cloud-Abhängigkeit, Auswertung für Erwachsene, nicht einsehbar, Verzögerung unbekannt |
+| Aqara FP2 | Ja, im Schlafmodus (Atemrate, Herzrate, Schlafphase) | Lokal (HomeKit) kommt nur Präsenz an. Vitaldaten liegen in der Aqara-Cloud; ein Community-Add-on (SleepRadar) liest sie von dort aus | **Eingeplant:** lokal als Präsenz-/Zonensensor („liegt im Bett"). Vitaldaten über die Cloud nur als experimentelle Zusatzquelle, nie als alleiniger Alarmgrund: Cloud-Abhängigkeit, Auswertung für Erwachsene, Verzögerung unbekannt |
 | Aqara FP300 | Nein (Präsenz, Licht, Temperatur, Feuchte; Batterie) | Zigbee/Thread/Matter | Nur als Präsenz- und Klimasensor brauchbar |
 | Aqara FP400 | Nein (Präsenz, Zonen, Personenzahl) | Drittsysteme sehen nur Präsenz und Licht | Nicht geeignet |
-| Seeed MR60BHA2 (60 GHz, mit ESP32-C6) | Ja: Atemrate, Herzrate, Abstand, Anzahl Ziele | ESPHome, direkt lokal, fertig geflasht lieferbar | **Startpunkt der Bauanleitung** |
+| Seeed MR60BHA2 (60 GHz, mit ESP32-C6) | Ja: Atemrate, Herzrate, Abstand, Anzahl Ziele | ESPHome, direkt lokal, fertig geflasht lieferbar | **Eingeplant:** lokale Vitalquelle, Startpunkt der Bauanleitung |
 | DFRobot C1001, HLK-LD6002 | Ja | UART, eigener ESP32 und Firmware nötig | Alternativen, falls der MR60BHA2 nicht taugt |
 | Roh-Radar (z. B. Infineon BGT60TR13C) | Rohdaten, Auswertung selbst | Eigene Signalverarbeitung in der Vital-Engine | Ausbaustufe; in Studien und Abschlussarbeiten über dem Babybett erprobt |
 
 **Was dabei ehrlich offen ist:** Alle fertigen Module sind für Erwachsene bei bis zu 1,5 m ausgelegt. Ein Neugeborenes hat einen viel kleineren Brustkorb, atmet 30–60-mal pro Minute und hat einen Puls von 100–160. Ob die Firmware des MR60BHA2 dafür plausible Werte liefert oder Bereiche abschneidet, steht in keiner Quelle und muss gemessen werden. Forschung an Frühgeborenen zeigt, dass Radar die Atmung von Säuglingen grundsätzlich erfassen kann, allerdings mit eigener Auswertung der Rohdaten und aus etwa 45 cm Abstand.
 
-**Vorgehen in zwei Stufen:**
+**Vorgehen:**
 
-1. **Stufe 1 (vor der Geburt bestellen):** MR60BHA2 über dem Bett, Auswertung im Schattenmodus. Genutzt wird zunächst nur die robuste Aussage „Ziel vorhanden und Atembewegung erkannt: ja/nein", nicht die exakte Rate.
-2. **Stufe 2 (nur falls Stufe 1 beim Säugling nicht trägt):** Roh-Radar mit eigener Auswertung in der Vital-Engine.
+1. **Vor der Geburt:** beide Sensoren bestellen und montieren. Vortest an Erwachsenen gegen eine Referenz (Smartwatch oder Pulsoximeter): Stimmen Atemrate und Puls, wie schnell kommen die Werte an, wie verhält sich der FP2-Cloudweg bei Internetausfall? Außerdem prüfen, ob sich zwei 60-GHz-Sensoren am selben Bett gegenseitig stören.
+2. **Ab Geburt:** beide im Schattenmodus neben der Videoerkennung. Vom MR60BHA2 wird zunächst nur die robuste Aussage „Ziel vorhanden und Atembewegung erkannt: ja/nein" genutzt, nicht die exakte Rate.
+3. **Nach 14 Nächten:** Auswertung je Quelle (Verfügbarkeit, Aussetzer, Fehlalarme) und Entscheidung, welche Quellen in die Alarmlogik dürfen.
+4. **Nur falls keine fertige Lösung beim Säugling trägt:** Roh-Radar mit eigener Auswertung in der Vital-Engine.
 
 **Puls:** Die Herzbewegung ist beim Säugling noch einmal deutlich kleiner als die Atembewegung. Der Pulswert wird angezeigt und protokolliert, löst aber keinen Alarm aus, solange er nicht gegen ein Referenzgerät geprüft ist.
 
@@ -265,6 +295,44 @@ Zustände: `leer` · `schläft` · `unruhig` · `wach` · `weint` · `betreut` (
 | `button` | Testalarm, KI-Check jetzt, Quittieren, Schlummern |
 | `event` | Alarmereignisse für eigene Automationen |
 | Aktionen | `assess_now`, `acknowledge`, `snooze`, `test_alert`, `start_sleep`, `end_sleep` |
+
+### 5.10 Datenmodell und Einrichtung
+
+**Datenmodell:** Ein Config-Eintrag je Kind. Darunter beliebig viele **Schlafplätze**, jeder mit Kamera, Bett-Zone und zugeordneten Sensoren (Radar, Klima, Tür). Genau ein Schlafplatz ist aktiv; gewählt per Auswahl oder automatisch dort, wo das Kind erkannt wird. Mehrere Kinder sind mehrere Einträge mit getrennten Zuständen und Zielen.
+
+**Einrichtungsablauf (Config Flow):**
+
+1. Kind: Name, Geburtsdatum (daraus das Altersprofil, das mit dem Alter automatisch weiterschaltet).
+2. Schlafplatz: Frigate-Kamera wählen, Bett-Zone, optionale Sensoren zuordnen.
+3. Benachrichtigung: Geräte der Eltern, Reihenfolge der Eskalation, lokaler Alarmkanal.
+4. KI (optional): AI-Task-Entität wählen, bei Cloud-Anbietern Datenschutz bestätigen.
+5. Hinweis zur Zweckbestimmung bestätigen (kein Medizinprodukt).
+6. **Geführter Funktionstest:** Kommt Ton an? Wird eine abgespielte Weinaufnahme erkannt? Kommt der kritische Push trotz „Nicht stören" an? Geht die Sirene? Jeder Schritt wird abgehakt, Fehlendes erscheint als Reparaturhinweis.
+
+Der Funktionstest lässt sich jederzeit wiederholen; eine monatliche Erinnerung ist einstellbar.
+
+### 5.11 Betriebsanforderungen
+
+| Anforderung | Zielwert (Start, wird in Phase 0/1 gemessen) |
+|---|---|
+| Anhaltendes Weinen bis Push auf dem Handy | Einstellbare Dauer plus höchstens 5 s |
+| Ausfall einer Quelle bis Meldung | Höchstens 60 s |
+| Schnell-Check bis Antwort | Ohne KI unter 2 s, mit KI unter 10 s |
+| KI-Aufruf | Abbruch nach 20 s, dann gilt die deterministische Stufe |
+| Zusatzlast auf dem HA-Rechner durch die Integration | Vernachlässigbar (keine Videoverarbeitung im HA-Prozess) |
+
+- **Neustart:** Scharf-Zustand, laufende Alarme, Quittierungen und Schlafprotokoll überstehen einen Neustart. Nach dem Start gilt eine kurze Schonfrist, in der fehlende Quellen noch kein Alarm sind; danach greift der Watchdog normal.
+- **Update-Wächter:** Wird Home Assistant oder Frigate neu gestartet oder aktualisiert, während die Überwachung scharf ist, gibt es vorher eine Warnung und nachher eine Meldung „Überwachung war X Minuten unterbrochen".
+- **Zeit:** Alle Zeitlogik in UTC, Anzeige lokal; Sommerzeitwechsel ist ein eigener Testfall.
+
+### 5.12 Datenschutz, Sicherheit, Recht
+
+- **Netz:** Kamera ohne Internetzugang (Firewall-Regel oder eigenes Netzsegment), keine Portfreigaben, RTSP-Zugangsdaten nur in Frigate. Fernzugriff ausschließlich über den gesicherten Home-Assistant-Zugang.
+- **Bilder in Benachrichtigungen:** Das Handy lädt Schnappschüsse von Home Assistant; von unterwegs braucht das die externe Adresse. Einstellbar ohne Bildvorschau auf dem Sperrbildschirm.
+- **Speicherung:** Aufzeichnung und Aufbewahrungsdauer liegen bei Frigate; Empfehlung für die Kamera im Elternschlafzimmer ist keine oder sehr kurze Aufzeichnung. Die Integration speichert Ereignisprotokoll und Schlafdaten lokal, Bilder nur im ausdrücklich eingeschalteten Fehlersuch-Archiv.
+- **Keine Telemetrie:** Das Projekt sendet nichts an uns oder Dritte. Einzige Ausnahme ist der vom Nutzer gewählte Cloud-KI-Anbieter.
+- **Tonaufnahmen anderer Personen:** In Deutschland ist das heimliche Aufzeichnen nichtöffentlicher Gespräche strafbar (§ 201 StGB). Babysitter und Besuch müssen wissen, dass Kamera und Mikrofon laufen. Der Babysitter-Modus zeigt dazu einen Hinweis; die Doku erklärt es. Das ist ein Hinweis, keine Rechtsberatung.
+- **Zweckbestimmung:** siehe Abschnitt 2.
 
 ---
 
@@ -344,6 +412,57 @@ Legende: **M** = MVP (Phase 1), **2–5** = geplante Phase, **?** = Idee, noch z
 - **4** Automatisch scharf: Zeitplan, „Kind im Bett + Tür zu", oder manuell
 - **5** Blueprints für typische Automationen
 
+**G. Zweite Ideenrunde**
+
+*Erkennung und Zuverlässigkeit*
+
+- **M** Kamera-Selbstüberwachung: Bild zu dunkel oder verdeckt, Blickwinkel verstellt, Infrarot ausgefallen, Mikrofon tot (Pegel dauerhaft flach)
+- **M** Lernende Geräusch-Grundlinie: Weißes Rauschen oder ein Luftbefeuchter heben den Pegel dauerhaft an. Die Schwelle richtet sich nach dem gemessenen Grundpegel, ein Kalibrier-Assistent schlägt Startwerte vor.
+- **M** Update- und Neustart-Wächter (Abschnitt 5.11)
+- **M** Geführter Funktionstest mit monatlicher Erinnerung (Abschnitt 5.10)
+- **2** Haustier im Bett: Frigate erkennt Katze oder Hund in der Bett-Zone
+- **2** Meilenstein „dreht sich zum ersten Mal": Hinweis, dass ab jetzt nicht mehr gepuckt werden sollte und die Bauchlage-Regel sich ändert
+- **2** Spucken/Erbrechen im Bild als KI-Prüfpunkt
+- **?** Zeit in Bauchlage am Tag (beaufsichtigtes Üben) als Statistik
+
+*Komfort im Haus*
+
+- **4** Haus-Ruhemodus „Baby schläft": Türklingel leise oder nur aufs Handy, Durchsagen gedrosselt, Saugroboter pausiert, Fernseher-Lautstärke begrenzt; endet automatisch beim Aufwachen
+- **4** Automatisches Nachtlicht (rot, stark gedimmt), wenn nachts jemand das Zimmer betritt
+- **4** Raumklima aktiv regeln: Heizung und Luftbefeuchter, Hinweis bei offenem Fenster
+- **4** Kleidungsempfehlung: passende Schlafsackstärke zur aktuellen Raumtemperatur
+- **4** Lautstärkegrenze für weißes Rauschen
+- **4** Tagsüber Durchsage auf Lautsprechern statt Handyalarm („weint seit zwei Minuten")
+
+*Auswertung*
+
+- **5** Wachfenster-Vorschlag: voraussichtlich nächste Schlafenszeit aus Alter und Schlafprotokoll
+- **5** Wein-Statistik (Minuten pro Tag, Tageszeit), Zeit bis zur Beruhigung, was geholfen hat
+- **5** Dienst-Statistik: wer hat nachts wie oft reagiert
+- **5** Schnell-Protokoll per Taster, NFC-Aufkleber oder Benachrichtigungsknopf (Füttern, Windel), Weitergabe an Baby Buddy
+- **5** Export für die Kinderarztpraxis (Schlaf-, Wein- und Hustenverlauf)
+- **5** Erinnerungsalbum: Tagesbild oder Zeitraffer, auf Wunsch wählt die KI schöne Momente; nur lokal gespeichert
+
+*Bedienung*
+
+- **4** Smartwatch-Anzeige, Sperrbildschirm-Widget, Bild-in-Bild auf dem Fernseher, Wandtablet zeigt bei Alarm automatisch die Kamera
+- **?** Zweiter Standort (z. B. Großeltern) als eigene Instanz mit denselben Benachrichtigungszielen
+
+**Abdeckung klassischer Babyphone-Funktionen**
+
+| Funktion eines Kauf-Babyphones | Bei uns | Phase |
+|---|---|---|
+| Ton mithören | VOX-Audio auf Lautsprecher, Live-Ton im Dashboard | 1 (Dashboard), 4 (Lautsprecher) |
+| Bild, Nachtsicht | Kamera über go2rtc | 1 |
+| Geräuschanzeige (LED-Leiste) | Pegelsensor und Anzeige | 1 |
+| Geräuschalarm | Wein-/Schrei-Erkennung mit Dauerlogik | 1 |
+| Reichweiten-/Verbindungsalarm | Watchdog, Dead-Man-Summer | 1, 3 |
+| Gegensprechen | go2rtc, kameraabhängig | 4 |
+| Schlaflieder, Nachtlicht | Automationen über Home Assistant | 4 |
+| Temperaturanzeige | Raumklimasensor mit Bereichswarnung | 1 (Anzeige), 4 (Regelung) |
+| Schwenken/Zoomen | Kamerafunktion, Preset „Bett" | 4 |
+| Akku-Elterneinheit zum Mitnehmen | Handy; kein Ersatz für unterwegs | Nicht-Ziel |
+
 ---
 
 ## 7. Umsetzung in Phasen
@@ -367,6 +486,7 @@ Legende: **M** = MVP (Phase 1), **2–5** = geplante Phase, **?** = Idee, noch z
   3. go2rtc: Ton auf Lautsprecher (Format, Latenz), Substream für die Engine.
   4. Engine: Atemsignal aus aufgezeichnetem Testmaterial (Erwachsener, Puppe mit Motor) als Machbarkeitsbeweis.
 - Entscheidungen aus Abschnitt 9 treffen.
+- **Arbeitsteilung:** Das Repo-Gerüst und alle reinen Logikmodule entstehen ohne Hardware. Die Spikes 1 bis 3 brauchen das laufende Frigate, die Kamera und die Sensoren beim Projektinhaber; dafür liefert das Repo Prüfskripte und eine Checkliste, deren Ergebnisse als Spike-Notizen zurückfließen.
 - **Fertig, wenn:** leere Integration installiert sich über HACS, CI ist grün, vier Spike-Notizen liegen vor.
 
 **Phase 1 – MVP v0.1: klassisches Babyphone, nur verlässlicher**
@@ -406,6 +526,8 @@ Szenario-Labor (Compose mit HA, Mosquitto, Frigate und go2rtc, das Testvideos al
 - Testmaterial: frei lizenzierte Audiodatensätze für Weinen, selbst gestellte Szenen. Keine echten Kinderaufnahmen im Repository.
 - Jede neue Erkennung durchläuft den Schattenmodus, bevor sie alarmieren darf.
 
+**Projektrahmen:** MIT-Lizenz wie die Schwesterprojekte; Doku zweisprachig mit gleichen Dateinamen in `docs/de` und `docs/en`; `CHANGELOG.md`; Issue-Vorlagen; Versionen über GitHub-Releases, damit HACS Updates anbietet; vor v1.0 Eintrag im Home-Assistant-Brands-Repo und Antrag für die HACS-Standardliste.
+
 ---
 
 ## 9. Risiken und offene Entscheidungen
@@ -426,15 +548,16 @@ Szenario-Labor (Compose mit HA, Mosquitto, Frigate und go2rtc, das Testvideos al
 1. Name: Domain `checkbaby`, Anzeigename „CheckBaby – Smart Baby Monitor".
 2. KI: Cloud (Gemini, OpenRouter) als Opt-in ist ausdrücklich gewünscht; lokal bleibt möglich. Alles außer der KI-Bewertung läuft lokal.
 3. Frigate ist die zentrale Basis für Weinen, Schreien, Pegel und Bewegung. Die Atemstillstand-Erkennung schreiben wir selbst.
-4. mmWave-Radar kommt als zusätzliche Quelle dazu, als Eigenbau mit Bauanleitung (Abschnitt 5.7).
+4. mmWave-Radar kommt als zusätzliche Quelle dazu. Aqara FP2 und Seeed MR60BHA2 werden beide eingeplant und verglichen (Abschnitt 5.7).
 5. Erstes Altersprofil: Neugeborenes.
+6. Kamera: günstige WLAN-Innenkamera; Kandidaten UniFi G3 Instant und Reolink mit Schwenkkopf (Abschnitt 4, Hardware).
 
 **Noch offen:**
 
 1. Vital-Engine als eigener Container/Add-on oder im HA-Prozess? *Empfehlung: eigener Container, endgültig nach dem Spike.*
 2. Frigate direkt per MQTT oder über die Entitäten der Frigate-Integration? *Empfehlung: MQTT als Hauptweg, Entitäten als Rückfall.*
-3. Kameramodell: Reolink oder UniFi. Kriterien: RTSP mit Ton, gutes Infrarotbild aus kurzer Distanz, Montage senkrecht über dem Bett, Gegensprechen über go2rtc (bei UniFi nur über Protect).
-4. Hat der Frigate-Rechner eine GPU für ein lokales Bildmodell als Rückfallebene?
+3. Welche Grafikeinheit steckt im Frigate-Rechner (Typ, Grafikspeicher)? Entscheidet, ob ein lokales Bildmodell als Rückfallebene bei Internetausfall möglich ist.
+4. Genaues Kameramodell nach dem Vergleich in Phase 0. Bei UniFi: Läuft eine Protect-Konsole, und liefert ihr Stream den Ton so, dass Frigate ihn auswerten kann?
 
 ---
 
@@ -453,6 +576,7 @@ Szenario-Labor (Compose mit HA, Mosquitto, Frigate und go2rtc, das Testvideos al
 - [SleepRadar: Aqara-FP2-Vitaldaten über die Aqara-Cloud](https://community.home-assistant.io/t/sleepradar-aqara-fp2-sleep-vitals-heart-rate-breathing-rate-sleep-stage-as-home-assistant-mqtt-sensors/1016036) · [Aqara FP300](https://www.aqara.cn/eu/product/presence-multi-sensor-fp300) · [Aqara FP400 im Test](https://gizmodo.com/aqara-multi-sensor-fp400-review-not-quite-the-mmwave-of-the-future-2000804454)
 - [Radar-Atemüberwachung bei Frühgeborenen (Scientific Reports 2022)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8956695/) · [Studienprotokoll FMCW-Radar für Säuglinge (2025)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11897680/)
 - [Companion-App: lokaler Push](https://companion.home-assistant.io/docs/notifications/notification-local) · [Home Assistant: OpenRouter](https://www.home-assistant.io/integrations/open_router) · [Google Gemini](https://www.home-assistant.io/integrations/google_gemini)
+- [UniFi G3 Instant](https://eu.store.ui.com/eu/en/products/uvc-g3-ins) · [Reolink E1-Familie: RTSP/ONVIF je Modell](https://www.smartrtsp.com/guides/reolink-e1-rtsp-onvif) · [Reolink E1 Pro/Zoom in Home Assistant](https://community.home-assistant.io/t/reolink-e1-zoom-and-or-pro-in-ha/276745) · [Tapo C200 in Frigate mit Ton](https://community.home-assistant.io/t/tapo-c200-setup-in-frigate-with-audio-ptz/812613)
 - [localsmarthomeguide: Local baby monitor setup with Frigate and RTSP](https://localsmarthomeguide.com/articles/local-baby-monitor-setup-with-frigate-and-rtsp/) (vom Projektinhaber als Text bereitgestellt)
 
 Hinweis zur Recherche: Der HA-Blogartikel von 2017 und der techdout-Artikel waren aus der Arbeitsumgebung nicht direkt abrufbar; ihr Inhalt ist über Suchergebnisse bzw. den mitgelieferten Reddit-Thread abgedeckt. Angaben zu Frigate, `ai_task`, lokalem Push und den Radarmodulen stammen aus Dokumentation und Suchergebnissen und werden in Phase 0 am laufenden System überprüft. Für Radarmodule an Säuglingen gibt es keine Herstellerangaben; hier zählt nur die eigene Messung.
