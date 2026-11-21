@@ -1,0 +1,30 @@
+# Example for Home Assistant Container users. Copy, adjust, then:
+#   docker compose -f compose.example.yaml up -d --build
+# This is a breathing-movement hint, not a medical monitor.
+services:
+  checkbaby-engine:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Low-resolution sub-stream from go2rtc (the restream Frigate uses as well).
+      CHECKBABY_RTSP_URL: rtsp://go2rtc:8554/nursery_sub
+      CHECKBABY_ENGINE_ID: nursery
+      # Region over the child's upper body, as fractions of the picture.
+      CHECKBABY_ROI_X: "0.30"
+      CHECKBABY_ROI_Y: "0.35"
+      CHECKBABY_ROI_W: "0.40"
+      CHECKBABY_ROI_H: "0.30"
+      CHECKBABY_FPS: "8"
+      CHECKBABY_MQTT_HOST: mosquitto
+      CHECKBABY_MQTT_PORT: "1883"
+      CHECKBABY_MQTT_USERNAME: checkbaby
+      # Keep the password out of this file: put it into .env next to it.
+      CHECKBABY_MQTT_PASSWORD: ${CHECKBABY_MQTT_PASSWORD:?set CHECKBABY_MQTT_PASSWORD in .env}
+      CHECKBABY_TOPIC_PREFIX: checkbaby/engine
+      CHECKBABY_LOG_LEVEL: INFO
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s

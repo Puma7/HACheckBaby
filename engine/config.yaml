@@ -1,0 +1,55 @@
+# Home Assistant add-on manifest. Packaging as an add-on is untested, see README.md.
+name: CheckBaby Vital Engine
+version: "0.1.0"
+slug: checkbaby_engine
+description: >-
+  Breathing-movement hint from a camera sub-stream, published over MQTT.
+  Not a medical device.
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: application
+boot: auto
+options:
+  rtsp_url: rtsp://127.0.0.1:8554/nursery_sub
+  engine_id: nursery
+  roi_x: 0.0
+  roi_y: 0.0
+  roi_w: 1.0
+  roi_h: 1.0
+  fps: 8
+  frame_width: 64
+  mqtt_host: core-mosquitto
+  mqtt_port: 1883
+  mqtt_username: ""
+  mqtt_password: ""
+  topic_prefix: checkbaby/engine
+  log_level: INFO
+schema:
+  rtsp_url: str
+  engine_id: match(^[A-Za-z0-9_-]{1,64}$)
+  roi_x: float(0,1)
+  roi_y: float(0,1)
+  roi_w: float(0,1)
+  roi_h: float(0,1)
+  fps: float(5,30)
+  frame_width: int(16,320)
+  mqtt_host: str
+  mqtt_port: port
+  mqtt_username: str?
+  mqtt_password: password?
+  topic_prefix: str
+  log_level: list(DEBUG|INFO|WARNING|ERROR)
+  publish_interval_s: float(0.5,60)?
+  window_s: float(15,60)?
+  min_window_s: float(10,60)?
+  periodic_confidence: float(0,1)?
+  gross_motion_threshold: float(0,100)?
+  min_amplitude: float(0,100)?
+  dark_level: float(0,255)?
+  min_contrast: float(0,100)?
+  max_noise: float(0,1)?
+  max_gap_s: float(0.2,10)?
+  stale_after_s: float(0.5,30)?
+  frozen_after_s: float(1,60)?
