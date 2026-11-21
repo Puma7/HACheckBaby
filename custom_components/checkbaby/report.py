@@ -7,7 +7,7 @@ from typing import Any
 from .monitor import Snapshot
 from .sleep_log import SleepLog
 from .texts import alert_message, problem_names, state_name, text
-from .types import AlertLevel
+from .types import AlertLevel, ChildState
 
 
 def night_report(log: SleepLog, since: float, now: float) -> dict[str, Any]:
@@ -51,7 +51,7 @@ def quick_check_text(language: str, child: str, snapshot: Snapshot, now: float) 
     if snapshot.alert_kind is not None and snapshot.level >= AlertLevel.WARNING:
         alert = alert_message(language, child, snapshot.alert_kind, snapshot.level, snapshot.alert_detail)
         parts.append(text(language, "quick_alert", alert=alert.rstrip(".")))
-    if snapshot.asleep_since is not None:
+    if snapshot.asleep_since is not None and snapshot.state in (ChildState.ASLEEP, ChildState.RESTLESS):
         parts.append(text(language, "quick_asleep", minutes=round((now - snapshot.asleep_since) / 60)))
     if snapshot.assessment is not None and snapshot.assessment.reason:
         parts.append(text(language, "quick_ai", reason=snapshot.assessment.reason))

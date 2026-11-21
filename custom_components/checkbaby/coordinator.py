@@ -9,7 +9,14 @@ import json
 import logging
 from typing import Any
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import (
+    ATTR_UNIT_OF_MEASUREMENT,
+    EVENT_HOMEASSISTANT_STOP,
+    STATE_ON,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+    UnitOfTemperature,
+)
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
@@ -76,6 +83,8 @@ _SOURCES = (
     SOURCE_VITAL_SENSOR,
 )
 _ENGINE_VALID = ("periodic", "gross_motion", "no_motion")
+# A radar reading that has not been reported again for this long is not a reading.
+_VITAL_SENSOR_MAX_AGE = 120.0
 # Entities are told about a new snapshot at least this often, even if nothing changed.
 _REFRESH_SECONDS = 60.0
 _SAVE_DELAY_SECONDS = 15
@@ -365,9 +374,26 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             return None
         return state.state == STATE_ON
 
-    def _number(self, entity_id: str | None) -> float | None:
-        """The numeric state of an entity, None if it has none."""
+    def _celsius(self, entity_id: str | None) -> float | None:
+        """A temperature in degrees Celsius, whatever unit the sensor reports."""
+        value = self._number(entity_id)
         state = self.hass.states.get(entity_id) if entity_id else None
+        if value is None or state is None:
+            return None
+        if state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) == UnitOfTemperature.FAHRENHEIT:
+            return (value - 32.0) * 5.0 / 9.0
+        return value
+
+    def _number(self, entity_id: str | None, *, max_age_s: float | None = None) -> float | None:
+        """The numeric state of an entity, None if it has none or has not reported for too long.
+
+        Without the age limit a sensor that died while showing a value would
+        look like one that still measures it.
+        """
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if state is not None and max_age_s is not None:
+            if (dt_util.utcnow() - state.last_reported).total_seconds() > max_age_s:
+                return None
         try:
             value = float(state.state) if state is not None else float("nan")
         except ValueError:
@@ -395,24 +421,26 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             monitor.set_presence(self._is_on(place.presence_entity), now)
         if place.door_entity and (door := self._is_on(place.door_entity)) is not None:
             signals.door_open.set(door, now)
-        if place.cry_entity:
-            crying = self._is_on(place.cry_entity)
-            if crying is not None:
-                signals.crying.set(crying, now)
-            if not place.frigate_camera:
+        if not place.frigate_camera:
+            # With a Frigate camera these come over MQTT; entities would overwrite them.
+            if place.cry_entity:
+                crying = self._is_on(place.cry_entity)
+                if crying is not None:
+                    signals.crying.set(crying, now)
                 watchdog.set_healthy(SOURCE_CRY_SENSOR, crying is not None, now)
-        if place.motion_entity and (motion := self._is_on(place.motion_entity)) is not None:
-            monitor.set_motion(motion, now)
-        if place.level_entity and not place.frigate_camera:
-            value = self._number(place.level_entity)
-            if value is not None:
-                signals.set_level(value, self.settings.noise_margin_db, now)
-            watchdog.set_healthy(SOURCE_AUDIO, value is not None, now)
-        signals.temperature = self._number(place.temperature_entity)
+            if place.motion_entity and (motion := self._is_on(place.motion_entity)) is not None:
+                monitor.set_motion(motion, now)
+            if place.level_entity:
+                signals.flat_detection = False
+                value = self._number(place.level_entity)
+                if value is not None:
+                    signals.set_level(value, self.settings.noise_margin_db, now)
+                watchdog.set_healthy(SOURCE_AUDIO, value is not None, now)
+        signals.temperature = self._celsius(place.temperature_entity)
         signals.humidity = self._number(place.humidity_entity)
         self.heart_rate = self._number(place.heart_rate_entity)
         if place.breath_rate_entity:
-            rate = self._number(place.breath_rate_entity)
+            rate = self._number(place.breath_rate_entity, max_age_s=_VITAL_SENSOR_MAX_AGE)
             signals.set_vital(
                 VITAL_RADAR, valid=rate is not None, breathing=bool(rate), moving=False, rate=rate, now=now
             )
@@ -450,6 +478,7 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             self.config_entry.async_create_background_task(
                 self.hass, self._async_subscribe_sources(), f"{DOMAIN} subscribe"
             )
+            self._update_issues()
         self._poll_entities(now)
         self.monitor.tick(now, self.profile)
 
@@ -460,6 +489,9 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             if note.stage in (Stage.FIRST, Stage.UPGRADE):
                 for listener in self.alert_listeners:
                     listener(note)
+        local_call = self.notifier.local_change(self.monitor.alerts.local_wanted())
+        if local_call is not None:
+            self.config_entry.async_create_background_task(self.hass, local_call, f"{DOMAIN} local alarm")
         vox_action = self.monitor.take_vox_action()
         if vox_action is not None:
             self.config_entry.async_create_background_task(
@@ -543,6 +575,8 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
         return bool(
             self._options(CONF_AI_ENTITIES)
             and self._options(CONF_AI_CONSENT, False)
+            # In privacy mode no image leaves the house, not even on request.
+            and not self.settings.privacy
             and place is not None
             and place.camera_entity
         )
@@ -644,7 +678,9 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             "state_text": state_name(self.language, snapshot.state),
             "alert_level": snapshot.level.name.lower(),
             "alert": snapshot.alert_kind.value if snapshot.alert_kind else None,
-            "asleep_minutes": None if snapshot.asleep_since is None else round((now - snapshot.asleep_since) / 60),
+            "asleep_minutes": round((now - snapshot.asleep_since) / 60)
+            if snapshot.asleep_since is not None and snapshot.state in (ChildState.ASLEEP, ChildState.RESTLESS)
+            else None,
             "noise_level": snapshot.level_db,
             "breathing_movement": snapshot.breathing,
             "problems": list(snapshot.problems),

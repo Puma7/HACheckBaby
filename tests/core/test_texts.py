@@ -103,6 +103,10 @@ def test_quick_check_text_mentions_what_matters() -> None:
     calm = night.monitor.snapshot(night.now, night.now - 400, night.now - 400)
     assert quick_check_text("en", "Mia", calm, night.now) == "Mia: asleep. Asleep for 5 min."
 
+    night.monitor.force_state(ChildState.AWAKE, night.now)
+    awake = night.monitor.snapshot(night.now, night.now - 400, night.now - 400)
+    assert quick_check_text("en", "Mia", awake, night.now) == "Mia: awake."
+
     night.cry()
     night.audio_alive = False
     night.advance(70)

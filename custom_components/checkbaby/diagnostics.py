@@ -7,6 +7,7 @@ from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import CONF_AUDIO_URL, CONF_BIRTH_DATE, CONF_CHILD_NAME
 from .models import CheckBabyConfigEntry
@@ -31,7 +32,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: CheckBa
         "snapshot": snapshot,
         "problems": list(monitor.problems),
         "events": list(monitor.events),
-        "ai_calls_last_hour": coordinator.budget.used(coordinator.data.state_since),
+        "ai_calls_last_hour": coordinator.budget.used(dt_util.utcnow().timestamp()),
     }
     redacted: dict[str, Any] = async_redact_data(payload, TO_REDACT)
     return redacted

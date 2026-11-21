@@ -188,6 +188,22 @@ def test_sensitivity_and_mode_scale_the_delay(sensitivity: Sensitivity, mode: Mo
     assert night.monitor.settings.cry_warning_delay() == expected
 
 
+def test_snoozed_crying_does_not_turn_critical_until_the_snooze_is_over() -> None:
+    night = Night()
+    night.cry()
+    night.advance(20)
+    night.monitor.snooze(300, night.now)
+    night.advance(299)
+    assert night.monitor.alerts.active[AlertKind.CRYING].level is AlertLevel.WARNING
+
+    night.advance(2)  # snooze over: the warning comes back
+    assert night.stages(AlertKind.CRYING).count(Stage.FIRST) == 2
+    night.advance(178)
+    assert night.monitor.alerts.active[AlertKind.CRYING].level is AlertLevel.WARNING
+    night.advance(3)
+    assert night.monitor.alerts.active[AlertKind.CRYING].level is AlertLevel.CRITICAL
+
+
 def test_snooze_delays_the_crying_warning() -> None:
     night = Night()
     night.monitor.snooze(300, night.now)
@@ -338,6 +354,41 @@ def test_signal_that_was_unusable_restarts_the_count() -> None:
     assert AlertKind.NO_BREATHING in night.monitor.alerts.active
 
 
+def test_silence_after_a_large_movement_is_not_counted() -> None:
+    """Lifting the child out looks like this: movement, then nothing."""
+    night = Night(breathing_alert=True)
+    _run_vital(night, 30, breathing=True)
+    _run_vital(night, 4, breathing=False, moving=True)
+    _run_vital(night, 120, breathing=False)
+    assert AlertKind.NO_BREATHING not in night.monitor.alerts.active
+
+    # Back in bed and breathing: the hint is live again.
+    _run_vital(night, 10, breathing=True)
+    _run_vital(night, 22, breathing=False)
+    assert AlertKind.NO_BREATHING in night.monitor.alerts.active
+
+
+def test_camera_movement_before_the_silence_is_not_counted_either() -> None:
+    night = Night(breathing_alert=True)
+    _run_vital(night, 30, breathing=True)
+    night.monitor.set_motion(True, night.now)
+    _run_vital(night, 4, breathing=False)
+    night.monitor.set_motion(False, night.now)
+    _run_vital(night, 120, breathing=False)
+    assert AlertKind.NO_BREATHING not in night.monitor.alerts.active
+
+
+def test_after_someone_was_with_the_child_breathing_must_be_seen_again() -> None:
+    night = Night(breathing_alert=True)
+    _run_vital(night, 30, breathing=True)
+    night.monitor.signals.door_open.set(True, night.now)
+    _run_vital(night, 5, breathing=True)
+    night.monitor.signals.door_open.set(False, night.now)
+    _run_vital(night, 120, breathing=False)  # the bed is empty now
+    assert night.monitor.state is not ChildState.ATTENDED
+    assert AlertKind.NO_BREATHING not in night.monitor.alerts.active
+
+
 @pytest.mark.parametrize("sign", ["moving", "camera_motion", "crying", "absent"])
 def test_other_signs_of_life_rule_out_the_breathing_alert(sign: str) -> None:
     night = Night(breathing_alert=True)
@@ -448,6 +499,25 @@ def test_unsure_all_fine_does_not_take_back_an_ai_warning() -> None:
     night.advance(5)
     night.monitor.apply_assessment(_assessment(night, confidence=0.9), night.now, night.profile, "routine")
     assert AlertKind.AIRWAY_RISK not in night.monitor.alerts.active
+
+
+def test_unsure_look_does_not_lower_an_ai_warning_but_a_sure_one_does() -> None:
+    night = Night(ai_enabled=True)
+    night.monitor.apply_assessment(
+        _assessment(night, airway_risk="likely"), night.now, night.profile, "routine"
+    )
+    night.advance(16)
+
+    unsure = _assessment(night, airway_risk="possible", confidence=0.2)
+    night.monitor.apply_assessment(unsure, night.now, night.profile, "recheck")
+    assert night.monitor.alerts.active[AlertKind.AIRWAY_RISK].level is AlertLevel.WARNING
+
+    night.advance(5)
+    sure = _assessment(night, airway_risk="possible", confidence=0.9)
+    night.monitor.apply_assessment(sure, night.now, night.profile, "routine")
+    assert night.monitor.alerts.active[AlertKind.AIRWAY_RISK].level is AlertLevel.INFO
+    night.advance(1)
+    assert night.stages(AlertKind.AIRWAY_RISK)[-1] is Stage.CLEARED  # taken off the phones
 
 
 def test_recheck_never_schedules_another_recheck() -> None:

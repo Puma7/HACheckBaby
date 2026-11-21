@@ -358,6 +358,21 @@ async def test_routine_ai_checks_respect_switch_consent_and_budget(
     assert len(ai.calls) == 2  # the hourly budget stops the third
 
 
+async def test_privacy_mode_blocks_even_a_manual_ai_check(
+    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory
+) -> None:
+    entry = make_entry(options=AI_OPTIONS)
+    ai = FakeAI(hass)
+    await _start(hass, entry, freezer)
+    await turn_on(hass, entry, "privacy_mode")
+
+    assert await _call(hass, "assess_now") == {"assessment": None}
+    await _call(hass, "quick_check", {"with_ai": True})
+    button = entity_id(hass, entry, "button", "assess_now")
+    await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+    assert ai.calls == []  # no image leaves the house
+
+
 async def test_no_ai_calls_without_consent(
     hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory
 ) -> None:

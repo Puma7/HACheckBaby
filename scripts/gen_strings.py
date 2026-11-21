@@ -100,7 +100,7 @@ def build(t):
 EN = {
  "user.title": "Set up CheckBaby", "user.desc": "One entry per child. You can set this up before the birth: enter the expected due date and correct it later.",
  "user.child_name": "Name of the child", "user.birth_date": "Birth date or expected due date",
- "user.child_name.desc": "Used for the device, its entities and the notifications.", "user.birth_date.desc": "Selects the age profile and its default thresholds.",
+ "user.child_name.desc": "Used for the device, its entities and the notifications.", "user.birth_date.desc": "Sets the age profile, which decides which alerts apply (prone position, leaving the bed).",
  "place.title": "Sleep place", "place.desc": "Where the child sleeps, with its camera and sensors. A sound source is required: a Frigate camera with audio detection, or a crying sensor. Everything else is optional. More sleep places can be added later.",
  "place.name": "Name of the sleep place", "place.frigate_camera": "Frigate camera name", "place.camera_entity": "Camera entity", "place.bed_zone": "Frigate zone of the bed",
  "place.door_entity": "Door contact", "place.person_is_caregiver": "A person seen by the camera counts as a caregiver", "place.presence_entity": "Presence sensor for the bed",
@@ -187,7 +187,7 @@ EN = {
 DE = {
  "user.title": "CheckBaby einrichten", "user.desc": "Ein Eintrag pro Kind. Die Einrichtung geht schon vor der Geburt: errechneten Termin eintragen und später korrigieren.",
  "user.child_name": "Name des Kindes", "user.birth_date": "Geburtsdatum oder errechneter Termin",
- "user.child_name.desc": "Wird für das Gerät, seine Entitäten und die Benachrichtigungen verwendet.", "user.birth_date.desc": "Bestimmt das Altersprofil und dessen Startwerte.",
+ "user.child_name.desc": "Wird für das Gerät, seine Entitäten und die Benachrichtigungen verwendet.", "user.birth_date.desc": "Bestimmt das Altersprofil und damit, welche Alarme gelten (Bauchlage, Bett verlassen).",
  "place.title": "Schlafplatz", "place.desc": "Wo das Kind schläft, mit Kamera und Sensoren. Eine Tonquelle ist nötig: eine Frigate-Kamera mit Audio-Erkennung oder ein Wein-Sensor. Alles andere ist optional. Weitere Schlafplätze lassen sich später hinzufügen.",
  "place.name": "Name des Schlafplatzes", "place.frigate_camera": "Name der Frigate-Kamera", "place.camera_entity": "Kamera-Entität", "place.bed_zone": "Frigate-Zone des Bettes",
  "place.door_entity": "Türkontakt", "place.person_is_caregiver": "Eine von der Kamera erkannte Person zählt als Betreuung", "place.presence_entity": "Präsenzsensor für das Bett",

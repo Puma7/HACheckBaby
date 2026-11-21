@@ -95,6 +95,10 @@ class AlertManager:
             for alert in self.active.values()
         )
 
+    def local_wanted(self) -> bool:
+        """True while an unanswered alert has reached the local alarm channel."""
+        return any(alert.local_fired and not alert.acked and not alert.shadow for alert in self.active.values())
+
     def drain(self) -> list[Notification]:
         """Return and forget the pending notifications."""
         out, self._out = self._out, []

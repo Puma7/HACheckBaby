@@ -193,6 +193,25 @@ def test_local_channel_fires_for_unanswered_crying_but_not_for_climate() -> None
     assert [n.kind for n in manager.drain() if n.stage is Stage.LOCAL] == [AlertKind.CRYING]
 
 
+def test_local_channel_is_wanted_only_while_an_alert_that_reached_it_is_unanswered() -> None:
+    manager = AlertManager()
+    manager.raise_alert(AlertKind.CRYING, AlertLevel.WARNING, {}, T0)
+    assert manager.local_wanted() is False
+    manager.tick(T0 + 60)
+    assert manager.local_wanted() is True
+
+    manager.snooze(T0 + 400, T0 + 70)
+    assert manager.local_wanted() is False  # snoozing silences it
+    manager.clear(AlertKind.CRYING, T0 + 80)
+    assert manager.local_wanted() is False
+
+    manager.raise_alert(AlertKind.SMOKE, AlertLevel.CRITICAL, {}, T0 + 500)
+    manager.tick(T0 + 560)
+    assert manager.local_wanted() is True
+    manager.acknowledge(T0 + 561)
+    assert manager.local_wanted() is False
+
+
 def test_internet_down_fires_local_channel_at_once() -> None:
     manager = AlertManager()
     manager.local_immediately = True

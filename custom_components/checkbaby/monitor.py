@@ -107,6 +107,9 @@ class Monitor:
 
     def set_motion(self, active: bool, now: float) -> None:
         """The camera reported movement."""
+        if active or self.signals.motion.active:
+            # Also when it ends: that is the latest moment something moved.
+            self.signals.last_gross = now
         self.signals.motion.set(active, now)
         if active:
             self.last_motion = now
@@ -149,6 +152,8 @@ class Monitor:
             self._enter(new_state, now)
         if self.state is ChildState.ATTENDED:
             self.left_unattended = False
+            # The child may be lifted out; breathing has to be seen again afterwards.
+            self.signals.forget_breathing()
 
         desired = evaluate(
             RuleContext(
@@ -238,17 +243,21 @@ class Monitor:
             return
         desired = evaluate_assessment(assessment, previous, profile)
         wanted = {item.kind for item in desired}
+        unsure = assessment.confidence < MIN_CONFIDENCE
         for item in desired:
-            is_new = item.kind not in self.alerts.active
+            existing = self.alerts.active.get(item.kind)
+            if existing is not None and unsure and item.level < existing.level >= AlertLevel.WARNING:
+                # An unsure look does not lower a warning either.
+                continue
             self.alerts.raise_alert(item.kind, item.level, item.detail, now)
-            if is_new:
+            if existing is None:
                 self._log("alert", now, kind=item.kind.value, level=int(item.level), source="ai")
         for kind in AI_KINDS - wanted:
             existing = self.alerts.active.get(kind)
             if existing is None:
                 continue
             # An unsure look is not enough to take back a warning.
-            if existing.level >= AlertLevel.WARNING and assessment.confidence < MIN_CONFIDENCE:
+            if existing.level >= AlertLevel.WARNING and unsure:
                 continue
             self.alerts.clear(kind, now)
             self._log("alert_cleared", now, kind=kind.value)

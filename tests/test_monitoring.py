@@ -591,6 +591,91 @@ async def test_mqtt_that_comes_up_later_is_subscribed(
     assert "mqtt" not in coordinator.monitor.problems
 
 
+async def test_local_alarm_goes_off_when_a_snoozed_alert_ends(
+    hass: HomeAssistant,
+    mqtt_mock: MqttMockHAClient,
+    config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    pushes: Pushes,
+    local_alarm: Pushes,
+) -> None:
+    await _start(hass, config_entry, freezer)
+    async_fire_mqtt_message(hass, f"{BASE}/audio/crying", "ON")
+    await _sound(hass, freezer, 80)
+    assert len(local_alarm["on"]) == 1
+
+    hass.bus.async_fire("mobile_app_notification_action", {"action": f"CHECKBABY_SNOOZE_{config_entry.entry_id}"})
+    await hass.async_block_till_done()
+    await _sound(hass, freezer, 2)
+    assert len(local_alarm["off"]) == 1  # quiet means quiet
+
+    async_fire_mqtt_message(hass, f"{BASE}/audio/crying", "OFF")
+    await _sound(hass, freezer, 70)
+    assert state_of(hass, config_entry, "sensor", "alert_level") == "none"
+    assert config_entry.runtime_data.coordinator.notifier.local_on is False
+    assert len(local_alarm["on"]) == 1
+
+
+async def test_frigate_camera_wins_over_mapped_entities_and_fahrenheit_is_converted(
+    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory, pushes: Pushes
+) -> None:
+    entry = make_entry(
+        place={
+            CONF_FRIGATE_CAMERA: CAMERA,
+            CONF_CRY_ENTITY: "binary_sensor.cam_cry",
+            CONF_MOTION_ENTITY: "binary_sensor.cam_motion",
+            CONF_LEVEL_ENTITY: "sensor.cam_level",
+            CONF_TEMPERATURE_ENTITY: "sensor.room_temperature",
+        }
+    )
+    hass.states.async_set("binary_sensor.cam_cry", "off")
+    hass.states.async_set("binary_sensor.cam_motion", "off")
+    hass.states.async_set("sensor.cam_level", "-10")
+    hass.states.async_set("sensor.room_temperature", "68", {"unit_of_measurement": "°F"})
+    await _start(hass, entry, freezer)
+
+    async_fire_mqtt_message(hass, f"{BASE}/audio/crying", "ON")
+    async_fire_mqtt_message(hass, f"{BASE}/motion", "ON")
+    await _sound(hass, freezer, 4)
+
+    assert state_of(hass, entry, "binary_sensor", "crying") == "on"  # not overwritten by the entity
+    assert state_of(hass, entry, "binary_sensor", "motion") == "on"
+    assert float(state_of(hass, entry, "sensor", "noise_level")) < -40
+    assert entry.runtime_data.coordinator.monitor.signals.temperature == pytest.approx(20.0)
+    assert state_of(hass, entry, "sensor", "sleeping_bag") == "tog_2_5"
+
+
+async def test_constant_level_from_an_entity_is_not_a_dead_microphone(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, pushes: Pushes
+) -> None:
+    entry = make_entry(place={CONF_CRY_ENTITY: "binary_sensor.cam_cry", CONF_LEVEL_ENTITY: "sensor.cam_level"})
+    hass.states.async_set("binary_sensor.cam_cry", "off")
+    hass.states.async_set("sensor.cam_level", "-40")
+    await setup(hass, entry)
+    await turn_on(hass, entry, "monitoring")
+    await advance(hass, freezer, 700, step=10)
+    assert entry.runtime_data.coordinator.monitor.problems == []
+
+
+async def test_radar_that_stops_reporting_is_a_problem_not_continued_breathing(
+    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory, pushes: Pushes
+) -> None:
+    entry = make_entry(place={CONF_FRIGATE_CAMERA: CAMERA, CONF_BREATH_RATE_ENTITY: "sensor.radar_breath"})
+    hass.states.async_set("sensor.radar_breath", "42")
+    await _start(hass, entry, freezer)
+    await _sound(hass, freezer, 60)
+    assert state_of(hass, entry, "binary_sensor", "breathing_movement") == "on"
+
+    await _sound(hass, freezer, 64)  # the sensor still shows 42 but has not reported for two minutes
+
+    assert state_of(hass, entry, "binary_sensor", "breathing_movement") == "unknown"
+    assert entry.runtime_data.coordinator.monitor.problems == ["vital_sensor"]
+
+    hass.states.async_set("sensor.radar_breath", "41")
+    await _sound(hass, freezer, 2)
+    assert state_of(hass, entry, "binary_sensor", "breathing_movement") == "on"
+
+
 async def test_issues_for_missing_mqtt_targets_and_places(hass: HomeAssistant) -> None:
     entry = make_entry(options={}, places=[])
     await setup(hass, entry)

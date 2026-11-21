@@ -10,7 +10,7 @@
         },
         "data_description": {
           "child_name": "Wird für das Gerät, seine Entitäten und die Benachrichtigungen verwendet.",
-          "birth_date": "Bestimmt das Altersprofil und dessen Startwerte."
+          "birth_date": "Bestimmt das Altersprofil und damit, welche Alarme gelten (Bauchlage, Bett verlassen)."
         }
       },
       "place": {

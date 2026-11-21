@@ -51,24 +51,29 @@ class VitalReading:
     moving: bool = False
     rate: float | None = None
     updated: float | None = None
-    last_evidence: float | None = None
+    last_breathing: float | None = None
     valid_since: float | None = None
 
     def usable(self, now: float) -> bool:
         """Valid and fresh."""
         return self.valid and self.updated is not None and now - self.updated <= VITAL_STALE_S
 
-    def quiet_for(self, now: float) -> float | None:
-        """Seconds without any sign of life while the signal was usable.
+    def quiet_for(self, now: float, last_gross: float | None) -> float | None:
+        """Seconds without breathing movement, after breathing had been seen.
 
-        None when the source cannot make that statement: it is not usable, or
-        it has never seen the child breathe or move, so silence means nothing.
+        None when the source cannot make that statement: it is not usable, it
+        has not seen the child breathe, or the last sign of life was a large
+        movement. Silence after a large movement usually means the child was
+        lifted out, and it cannot be told apart from anything worse, so it is
+        never counted. The source has to see breathing again first.
         """
-        if not self.usable(now) or self.last_evidence is None or self.valid_since is None:
+        if not self.usable(now) or self.last_breathing is None or self.valid_since is None:
+            return None
+        if last_gross is not None and last_gross >= self.last_breathing:
             return None
         if self.breathing or self.moving:
             return 0.0
-        return now - max(self.last_evidence, self.valid_since)
+        return now - max(self.last_breathing, self.valid_since)
 
 
 @dataclass
@@ -91,6 +96,10 @@ class Signals:
     level_updated: float | None = None
     level_changed: float | None = None
     baseline_db: float | None = None
+    # A level read from another entity may legitimately stay constant.
+    flat_detection: bool = True
+    # When the camera or a vital source last saw a large movement.
+    last_gross: float | None = None
     vitals: dict[str, VitalReading] = field(default_factory=dict[str, VitalReading])
 
     def set_level(self, level_db: float, margin_db: float, now: float) -> None:
@@ -116,7 +125,8 @@ class Signals:
     def microphone_flat(self, now: float) -> bool:
         """True when levels still arrive but have not moved for a long time."""
         return (
-            self.level_changed is not None
+            self.flat_detection
+            and self.level_changed is not None
             and self.level_updated is not None
             and now - self.level_changed >= FLAT_LEVEL_S
             and now - self.level_updated < FLAT_LEVEL_S
@@ -143,8 +153,15 @@ class Signals:
         reading.moving = valid and moving
         reading.rate = rate if valid and breathing else None
         reading.updated = now
-        if reading.breathing or reading.moving:
-            reading.last_evidence = now
+        if reading.breathing:
+            reading.last_breathing = now
+        if reading.moving:
+            self.last_gross = now
+
+    def forget_breathing(self) -> None:
+        """Someone was with the child: every source has to see breathing anew."""
+        for reading in self.vitals.values():
+            reading.last_breathing = None
 
     def caregiver_present(self, now: float) -> bool:
         """Someone is with the child: door open (or just closed) or a person seen."""

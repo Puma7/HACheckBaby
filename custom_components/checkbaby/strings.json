@@ -10,7 +10,7 @@
         },
         "data_description": {
           "child_name": "Used for the device, its entities and the notifications.",
-          "birth_date": "Selects the age profile and its default thresholds."
+          "birth_date": "Sets the age profile, which decides which alerts apply (prone position, leaving the bed)."
         }
       },
       "place": {

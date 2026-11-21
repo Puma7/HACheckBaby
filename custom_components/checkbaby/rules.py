@@ -78,16 +78,17 @@ class RuleContext:
 def no_breathing_movement(ctx: RuleContext) -> list[str] | None:
     """Return the sources that report no sign of life, or None if the rule does not hold.
 
-    Holds only when a usable source that has seen the child breathe or move
-    before now sees neither for the configured time. Sources that are not
-    usable never count as "no movement".
+    Holds only when a usable source that has seen the child breathe now sees
+    neither breathing nor movement for the configured time, with no large
+    movement in between. Sources that are not usable never count as "no
+    movement", and "all" means all sources that are usable right now.
     """
     signals = ctx.signals
     if signals.presence is False or ctx.state in (ChildState.ATTENDED, ChildState.EMPTY):
         return None
     if signals.motion.active or signals.crying.active or signals.scream.active:
         return None
-    quiet = {name: reading.quiet_for(ctx.now) for name, reading in signals.vitals.items()}
+    quiet = {name: reading.quiet_for(ctx.now, signals.last_gross) for name, reading in signals.vitals.items()}
     usable = {name: seconds for name, seconds in quiet.items() if seconds is not None}
     if not usable:
         return None
@@ -139,11 +140,12 @@ def evaluate(ctx: RuleContext) -> list[Desired]:
     ) >= settings.cry_warning_delay()
     if cried_long_enough or (crying is not None and ctx.state is ChildState.CRYING):
         level = AlertLevel.WARNING
-        if crying is not None and (
-            crying.level is AlertLevel.CRITICAL
-            or (not crying.acked and now - crying.raised_at >= settings.cry_critical_s)
-        ):
-            level = AlertLevel.CRITICAL
+        if crying is not None:
+            # Snoozing is an answer too: the clock for "nobody reacts" starts when it ends.
+            unanswered_since = max(crying.raised_at, settings.snooze_until)
+            unanswered = not crying.acked and now - unanswered_since >= settings.cry_critical_s
+            if crying.level is AlertLevel.CRITICAL or unanswered:
+                level = AlertLevel.CRITICAL
         desired.append(Desired(AlertKind.CRYING, level, {"seconds": round(signals.distress_for(now))}))
 
     silent = no_breathing_movement(ctx)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Coroutine
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -69,13 +70,9 @@ class Notifier:
         """Carry out one notification."""
         if note.stage in _PUSH_STAGES:
             await self._async_push(note)
-        elif note.stage is Stage.LOCAL:
-            await self._async_local(True)
-        else:
+        elif note.stage is not Stage.LOCAL:
             entry_id = self._coordinator.config_entry.entry_id
             await self._async_notify(self.all_services(), build_clear(entry_id, note.kind))
-            if not self._coordinator.monitor.alerts.needs_attention():
-                await self._async_local(False)
 
     async def _async_push(self, note: Notification) -> None:
         coordinator = self._coordinator
@@ -107,11 +104,19 @@ class Notifier:
             except Exception:  # noqa: BLE001 - one failing phone must not stop the others
                 _LOGGER.exception("Sending to notify.%s failed", name)
 
+    def local_change(self, wanted: bool) -> Coroutine[Any, Any, None] | None:
+        """Return the call that brings the local alarm in line with the alerts, if one is needed.
+
+        The channel follows the state of the alerts, not single events, so it
+        cannot be left on by an alert that ended in an unusual way.
+        """
+        if wanted == self.local_on or not self._options.get(CONF_LOCAL_ALARM):
+            return None
+        self.local_on = wanted
+        return self._async_local(wanted)
+
     async def _async_local(self, on: bool) -> None:
         entities = list(self._options.get(CONF_LOCAL_ALARM, []))
-        if not entities or on == self.local_on:
-            return
-        self.local_on = on
         try:
             await self._hass.services.async_call(
                 "homeassistant", "turn_on" if on else "turn_off", {"entity_id": entities}, blocking=True
