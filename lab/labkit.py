@@ -143,7 +143,25 @@ async def boot(config_dir: Path, http_port: int, *, frontend: bool = False) -> A
         raise RuntimeError("Home Assistant did not boot")
     await hass.async_start()
     await hass.async_block_till_done()
+    await _confirm_http_config(hass)
     return hass
+
+
+async def _confirm_http_config(hass: Any) -> None:
+    """Tell Home Assistant that the lab's HTTP settings work.
+
+    Newer Home Assistant versions take an `http:` block from YAML as a trial:
+    unless it is confirmed, Home Assistant restarts itself five minutes after
+    the start to go back to the previous settings. In the lab that looked like
+    Home Assistant dying in the middle of a run.
+    """
+    try:
+        from homeassistant.components.http.config import async_get_and_load_store  # noqa: PLC0415
+    except ImportError:
+        return  # this version has no such trial
+    store = await async_get_and_load_store(hass)
+    if store.pending is not None:
+        await store.async_promote_pending()
 
 
 def _trace_stops(core: Any) -> None:
