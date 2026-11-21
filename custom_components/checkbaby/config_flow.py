@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from homeassistant.config_entries import (
@@ -119,24 +120,45 @@ def _notify_fields(hass: HomeAssistant) -> dict[Any, Any]:
     }
 
 
-def _option_fields(hass: HomeAssistant) -> dict[Any, Any]:
+def _ai_fields() -> dict[Any, Any]:
     return {
-        **_notify_fields(hass),
-        vol.Optional(CONF_BABYSITTER_SERVICE): SelectSelector(
-            SelectSelectorConfig(options=_mobile_apps(hass), custom_value=True)
-        ),
-        vol.Optional(CONF_HEARTBEAT_BUTTONS, default=[]): _entity(["button", "input_button"], multiple=True),
+        vol.Optional(CONF_AI_ENTITIES, default=[]): _entity("ai_task", multiple=True),
+        vol.Optional(CONF_AI_CONSENT, default=False): BooleanSelector(),
+    }
+
+
+def _section_fields(hass: HomeAssistant, section: str) -> dict[Any, Any]:
+    """The fields of one page of the options: who is told, the AI, or the other devices."""
+    if section == "notify":
+        return {
+            **_notify_fields(hass),
+            vol.Optional(CONF_BABYSITTER_SERVICE): SelectSelector(
+                SelectSelectorConfig(options=_mobile_apps(hass), custom_value=True)
+            ),
+            vol.Optional(CONF_HEARTBEAT_BUTTONS, default=[]): _entity(["button", "input_button"], multiple=True),
+        }
+    if section == "ai":
+        return {
+            **_ai_fields(),
+            vol.Optional(CONF_AI_BUDGET, default=DEFAULT_AI_BUDGET): NumberSelector(
+                NumberSelectorConfig(min=1, max=120, step=1, mode=NumberSelectorMode.BOX)
+            ),
+        }
+    return {
         vol.Optional(CONF_SMOKE_ENTITIES, default=[]): _entity("binary_sensor", multiple=True),
         vol.Optional(CONF_INTERNET_ENTITY): _entity("binary_sensor"),
         vol.Optional(CONF_VOX_PLAYER): _entity("media_player"),
-        vol.Optional(CONF_AI_ENTITIES, default=[]): _entity("ai_task", multiple=True),
-        vol.Optional(CONF_AI_CONSENT, default=False): BooleanSelector(),
-        vol.Optional(CONF_AI_BUDGET, default=DEFAULT_AI_BUDGET): NumberSelector(
-            NumberSelectorConfig(min=1, max=120, step=1, mode=NumberSelectorMode.BOX)
-        ),
         vol.Optional(CONF_TOPIC_PREFIX, default=DEFAULT_TOPIC_PREFIX): TextSelector(),
         vol.Optional(CONF_DASHBOARD_PATH, default=DEFAULT_DASHBOARD_PATH): TextSelector(),
     }
+
+
+# The keys each options page owns; saving a page replaces exactly these.
+SECTION_KEYS: dict[str, tuple[str, ...]] = {
+    "notify": (CONF_NOTIFY_SERVICES, CONF_LOCAL_ALARM, CONF_BABYSITTER_SERVICE, CONF_HEARTBEAT_BUTTONS),
+    "ai": (CONF_AI_ENTITIES, CONF_AI_CONSENT, CONF_AI_BUDGET),
+    "devices": (CONF_SMOKE_ENTITIES, CONF_INTERNET_ENTITY, CONF_VOX_PLAYER, CONF_TOPIC_PREFIX, CONF_DASHBOARD_PATH),
+}
 
 
 def validate_place(user_input: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str]]:
@@ -156,13 +178,22 @@ def validate_place(user_input: dict[str, Any]) -> tuple[dict[str, Any], dict[str
 
 
 def validate_targets(user_input: dict[str, Any]) -> dict[str, str]:
-    """Report options that would leave the monitor unable to alert, or lack consent."""
-    errors: dict[str, str] = {}
+    """Report input that would leave the monitor unable to alert anyone."""
     if not user_input.get(CONF_NOTIFY_SERVICES) and not user_input.get(CONF_LOCAL_ALARM):
-        errors["base"] = "no_alert_target"
+        return {"base": "no_alert_target"}
+    return {}
+
+
+def validate_nothing(user_input: dict[str, Any]) -> dict[str, str]:
+    """Accept a page whose fields are all optional."""
+    return {}
+
+
+def validate_ai(user_input: dict[str, Any]) -> dict[str, str]:
+    """Report AI tasks chosen without the consent to send them pictures."""
     if user_input.get(CONF_AI_ENTITIES) and not user_input.get(CONF_AI_CONSENT):
-        errors[CONF_AI_CONSENT] = "ai_consent_required"
-    return errors
+        return {CONF_AI_CONSENT: "ai_consent_required"}
+    return {}
 
 
 class CheckBabyConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -228,11 +259,27 @@ class CheckBabyConfigFlow(ConfigFlow, domain=DOMAIN):
             errors = validate_targets(user_input)
             if not errors:
                 self._options = dict(user_input)
-                return await self.async_step_disclaimer()
+                return await self.async_step_ai()
 
         schema = vol.Schema(_notify_fields(self.hass))
         return self.async_show_form(
             step_id="notify",
+            data_schema=self.add_suggested_values_to_schema(schema, user_input),
+            errors=errors,
+        )
+
+    async def async_step_ai(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Offer the AI assessment. Leaving the page empty skips it."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            errors = validate_ai(user_input)
+            if not errors:
+                self._options.update(user_input)
+                return await self.async_step_disclaimer()
+
+        schema = vol.Schema(_ai_fields())
+        return self.async_show_form(
+            step_id="ai",
             data_schema=self.add_suggested_values_to_schema(schema, user_input),
             errors=errors,
         )
@@ -263,20 +310,42 @@ class CheckBabyConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class CheckBabyOptionsFlow(OptionsFlow):
-    """Change who is told and what else is connected."""
+    """Change who is told, the AI assessment, or what else is connected: one short page each."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Show all options on one page."""
+        """Let the user pick what to change."""
+        return self.async_show_menu(step_id="init", menu_options=list(SECTION_KEYS))
+
+    async def async_step_notify(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Who is told and how."""
+        return self._section("notify", user_input, validate_targets)
+
+    async def async_step_ai(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The AI assessment."""
+        return self._section("ai", user_input, validate_ai)
+
+    async def async_step_devices(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Other connected devices and settings."""
+        return self._section("devices", user_input, validate_nothing)
+
+    def _section(
+        self,
+        section: str,
+        user_input: dict[str, Any] | None,
+        validate: Callable[[dict[str, Any]], dict[str, str]],
+    ) -> ConfigFlowResult:
+        """Show one page; saving replaces that page's settings and keeps the others."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            errors = validate_targets(user_input)
+            errors = validate(user_input)
             if not errors:
-                return self.async_create_entry(data=user_input)
+                kept = {key: value for key, value in self.config_entry.options.items() if key not in SECTION_KEYS[section]}
+                return self.async_create_entry(data={**kept, **user_input})
 
-        schema = vol.Schema(_option_fields(self.hass))
+        schema = vol.Schema(_section_fields(self.hass, section))
         suggested = user_input if user_input is not None else dict(self.config_entry.options)
         return self.async_show_form(
-            step_id="init",
+            step_id=section,
             data_schema=self.add_suggested_values_to_schema(schema, suggested),
             errors=errors,
         )

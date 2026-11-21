@@ -59,6 +59,18 @@
           "local_alarm_entities": "Switched on when an alert stays unanswered for a minute, or at once if the internet is down. Put it where you sleep, never in the child's room."
         }
       },
+      "ai": {
+        "title": "AI assessment (optional)",
+        "description": "An AI model can look at a camera picture and say whether the child lies on its back, whether the face is free and whether loose things are in the bed. Leave this page empty to skip it; everything else works without it.\n\nThe model itself is added once in Home Assistant, not here: Settings > Devices & services > Add integration > Google Gemini or OpenRouter (you enter the API key there). After that the AI task appears in the list below. A local model through Ollama works the same way.",
+        "data": {
+          "ai_task_entities": "AI task",
+          "ai_consent": "Images of the child may be sent to these AI tasks"
+        },
+        "data_description": {
+          "ai_task_entities": "If you choose several, they are asked in this order and the first one that answers is used. A cloud model receives camera pictures of the child; a local model keeps them at home.",
+          "ai_consent": "Required to use the AI assessment. Check your provider's terms on how pictures are used. With this set, the assessment runs by itself while monitoring is on; the switch \"AI assessment\" pauses it."
+        }
+      },
       "disclaimer": {
         "title": "What CheckBaby is, and what it is not",
         "description": "CheckBaby is not a medical device. It cannot prevent sudden infant death and it can fail without warning. It supports your supervision and the rules for safe infant sleep; it does not replace either. Keep a simple baby monitor as a fallback.",
@@ -76,36 +88,64 @@
     },
     "abort": {
       "already_configured": "A child with this name is already set up."
+    },
+    "create_entry": {
+      "default": "Done. Two things before the first night: switch on \"Monitoring\" on the device page when the child sleeps, and press \"Test alert\" once to check that the alert arrives on every phone, also when it is muted."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "CheckBaby options",
-        "description": "Who is told, and what else is connected. Sleep places are managed as separate entries of the child.",
+        "description": "Pick what you want to change. Sleep places are managed on the page of the entry itself: add or change them there.",
+        "menu_options": {
+          "notify": "Who is told",
+          "ai": "AI assessment",
+          "devices": "Other devices and settings"
+        }
+      },
+      "notify": {
+        "title": "Who is told",
+        "description": "Choose the phones that receive alerts and, if you have one, a local alarm that works without internet. At least one of the two is required.",
         "data": {
           "notify_services": "Phones",
           "local_alarm_entities": "Local alarm (siren, light, switch)",
           "babysitter_service": "Babysitter's phone",
-          "heartbeat_buttons": "Dead-man heartbeat buttons",
-          "smoke_entities": "Smoke and CO detectors",
-          "internet_entity": "Internet connectivity sensor",
-          "vox_media_player": "Speaker for the audio relay",
-          "ai_task_entities": "AI tasks, in order of preference",
-          "ai_consent": "Images of the child may be sent to these AI tasks",
-          "ai_calls_per_hour": "AI calls per hour at most",
-          "frigate_topic_prefix": "Frigate MQTT topic prefix",
-          "dashboard_path": "Dashboard opened from a notification"
+          "heartbeat_buttons": "Dead-man heartbeat buttons"
         },
         "data_description": {
           "notify_services": "Notify services of the Home Assistant companion app. Critical alerts go to all of them.",
           "local_alarm_entities": "Switched on when an alert stays unanswered for a minute, or at once if the internet is down. Put it where you sleep, never in the child's room.",
           "babysitter_service": "Receives alerts only while the mode is “Babysitter”.",
-          "heartbeat_buttons": "Pressed every 30 seconds while monitoring is armed and healthy, so that a separate device can sound when Home Assistant fails.",
+          "heartbeat_buttons": "Pressed every 30 seconds while monitoring is armed and healthy, so that a separate device can sound when Home Assistant fails."
+        }
+      },
+      "ai": {
+        "title": "AI assessment (optional)",
+        "description": "An AI model can look at a camera picture and say whether the child lies on its back, whether the face is free and whether loose things are in the bed. Leave this page empty to skip it; everything else works without it.\n\nThe model itself is added once in Home Assistant, not here: Settings > Devices & services > Add integration > Google Gemini or OpenRouter (you enter the API key there). After that the AI task appears in the list below. A local model through Ollama works the same way.",
+        "data": {
+          "ai_task_entities": "AI task",
+          "ai_consent": "Images of the child may be sent to these AI tasks",
+          "ai_calls_per_hour": "AI calls per hour at most"
+        },
+        "data_description": {
+          "ai_task_entities": "If you choose several, they are asked in this order and the first one that answers is used. A cloud model receives camera pictures of the child; a local model keeps them at home.",
+          "ai_consent": "Required to use the AI assessment. Check your provider's terms on how pictures are used. With this set, the assessment runs by itself while monitoring is on; the switch \"AI assessment\" pauses it."
+        }
+      },
+      "devices": {
+        "title": "Other devices and settings",
+        "description": "Everything here is optional.",
+        "data": {
+          "smoke_entities": "Smoke and CO detectors",
+          "internet_entity": "Internet connectivity sensor",
+          "vox_media_player": "Speaker for the audio relay",
+          "frigate_topic_prefix": "Frigate MQTT topic prefix",
+          "dashboard_path": "Dashboard opened from a notification"
+        },
+        "data_description": {
           "smoke_entities": "Passed through as critical alerts, even while monitoring is off.",
-          "internet_entity": "While it is off, the local alarm fires at once.",
-          "ai_task_entities": "The first one that answers is used. A cloud model receives camera images of the child; a local model keeps them at home.",
-          "ai_consent": "Required to use the AI assessment. Check your provider's terms on how images are used."
+          "internet_entity": "While it is off, the local alarm fires at once."
         }
       }
     },

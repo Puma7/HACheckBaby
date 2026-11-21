@@ -350,8 +350,11 @@ async def test_routine_ai_checks_respect_switch_consent_and_budget(
     number = entity_id(hass, entry, "number", "ai_interval_min")
     await hass.services.async_call("number", "set_value", {"entity_id": number, "value": 2}, blocking=True)
 
+    switch = entity_id(hass, entry, "switch", "ai_assessment_enabled")
+    assert state_of(hass, entry, "switch", "ai_assessment_enabled") == "on"  # on unless paused
+    await hass.services.async_call("switch", "turn_off", {"entity_id": switch}, blocking=True)
     await _sound(hass, freezer, 130)
-    assert ai.calls == []  # the AI switch is off
+    assert ai.calls == []  # paused
 
     await turn_on(hass, entry, "ai_assessment_enabled")
     await _sound(hass, freezer, 400)

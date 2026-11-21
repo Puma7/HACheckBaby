@@ -1,0 +1,39 @@
+name: Release version check
+
+# A release tag must name the version in the manifest, otherwise HACS shows one
+# number and Home Assistant another. This fails the tag or release run so that a
+# mismatch is seen at once; tags are never rewritten.
+on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types: [published, edited]
+
+concurrency:
+  group: release-version-${{ github.event.release.tag_name || github.ref_name }}
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Compare tag and manifest version
+        env:
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open("custom_components/checkbaby/manifest.json"))["version"])')
+          case "$TAG" in
+            "v$version" | "v$version"-*)
+              echo "Tag $TAG matches manifest version $version" ;;
+            *)
+              echo "::error::Tag $TAG does not match manifest version $version. Set the version in custom_components/checkbaby/manifest.json to the release version first, then tag that commit v<version>."
+              exit 1 ;;
+          esac

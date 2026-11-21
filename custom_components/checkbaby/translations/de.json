@@ -59,6 +59,18 @@
           "local_alarm_entities": "Wird eingeschaltet, wenn ein Alarm eine Minute unbeantwortet bleibt, oder sofort, wenn das Internet ausgefallen ist. Gehört ins Elternschlafzimmer, nie ins Kinderzimmer."
         }
       },
+      "ai": {
+        "title": "KI-Bewertung (optional)",
+        "description": "Ein KI-Modell kann ein Kamerabild ansehen und sagen, ob das Kind auf dem Rücken liegt, ob das Gesicht frei ist und ob lose Dinge im Bett liegen. Lass die Seite leer, um das zu überspringen; alles andere funktioniert auch ohne.\n\nDas Modell selbst wird einmal in Home Assistant hinzugefügt, nicht hier: Einstellungen > Geräte & Dienste > Integration hinzufügen > Google Gemini oder OpenRouter (dort trägst du den API-Schlüssel ein). Danach erscheint die KI-Aufgabe in der Liste unten. Ein lokales Modell über Ollama funktioniert genauso.",
+        "data": {
+          "ai_task_entities": "KI-Aufgabe",
+          "ai_consent": "Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden"
+        },
+        "data_description": {
+          "ai_task_entities": "Wählst du mehrere, werden sie in dieser Reihenfolge gefragt, und die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
+          "ai_consent": "Nötig, um die KI-Bewertung zu nutzen. Prüfe in den Bedingungen deines Anbieters, wie Bilder verwendet werden. Ist das gesetzt, läuft die Bewertung von selbst, solange die Überwachung an ist; der Schalter „KI-Bewertung“ pausiert sie."
+        }
+      },
       "disclaimer": {
         "title": "Was CheckBaby ist und was nicht",
         "description": "CheckBaby ist kein Medizinprodukt. Es kann den plötzlichen Kindstod nicht verhindern und kann ohne Vorwarnung ausfallen. Es unterstützt deine Aufsicht und die Regeln für sicheren Babyschlaf, ersetzt aber beides nicht. Behalte ein einfaches Babyphone als Rückfallebene.",
@@ -76,36 +88,64 @@
     },
     "abort": {
       "already_configured": "Ein Kind mit diesem Namen ist bereits eingerichtet."
+    },
+    "create_entry": {
+      "default": "Fertig. Zwei Dinge vor der ersten Nacht: Schalte auf der Geräteseite „Überwachung“ ein, wenn das Kind schläft, und drücke einmal „Testalarm“, um zu prüfen, dass der Alarm auf jedem Handy ankommt, auch stumm geschaltet."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "CheckBaby-Optionen",
-        "description": "Wer benachrichtigt wird und was sonst angeschlossen ist. Schlafplätze werden als eigene Einträge des Kindes verwaltet.",
+        "description": "Wähle, was du ändern möchtest. Schlafplätze verwaltest du auf der Seite des Eintrags selbst: dort hinzufügen oder ändern.",
+        "menu_options": {
+          "notify": "Wer benachrichtigt wird",
+          "ai": "KI-Bewertung",
+          "devices": "Weitere Geräte und Einstellungen"
+        }
+      },
+      "notify": {
+        "title": "Wer benachrichtigt wird",
+        "description": "Wähle die Handys, die Alarme bekommen, und falls vorhanden einen lokalen Alarm, der ohne Internet funktioniert. Mindestens eines von beiden ist nötig.",
         "data": {
           "notify_services": "Handys",
           "local_alarm_entities": "Lokaler Alarm (Sirene, Licht, Schalter)",
           "babysitter_service": "Handy des Babysitters",
-          "heartbeat_buttons": "Herzschlag-Tasten für den Dead-Man-Summer",
-          "smoke_entities": "Rauch- und CO-Melder",
-          "internet_entity": "Sensor für die Internetverbindung",
-          "vox_media_player": "Lautsprecher für die Ton-Weiterleitung",
-          "ai_task_entities": "KI-Aufgaben, in bevorzugter Reihenfolge",
-          "ai_consent": "Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden",
-          "ai_calls_per_hour": "KI-Aufrufe pro Stunde höchstens",
-          "frigate_topic_prefix": "MQTT-Präfix von Frigate",
-          "dashboard_path": "Dashboard, das eine Benachrichtigung öffnet"
+          "heartbeat_buttons": "Herzschlag-Tasten für den Dead-Man-Summer"
         },
         "data_description": {
           "notify_services": "Benachrichtigungsdienste der Home-Assistant-App. Kritische Alarme gehen an alle.",
           "local_alarm_entities": "Wird eingeschaltet, wenn ein Alarm eine Minute unbeantwortet bleibt, oder sofort, wenn das Internet ausgefallen ist. Gehört ins Elternschlafzimmer, nie ins Kinderzimmer.",
           "babysitter_service": "Bekommt Alarme nur im Modus „Babysitter“.",
-          "heartbeat_buttons": "Werden alle 30 Sekunden gedrückt, solange die Überwachung scharf und störungsfrei ist. So kann ein eigenes Gerät Alarm geben, wenn Home Assistant ausfällt.",
+          "heartbeat_buttons": "Werden alle 30 Sekunden gedrückt, solange die Überwachung scharf und störungsfrei ist. So kann ein eigenes Gerät Alarm geben, wenn Home Assistant ausfällt."
+        }
+      },
+      "ai": {
+        "title": "KI-Bewertung (optional)",
+        "description": "Ein KI-Modell kann ein Kamerabild ansehen und sagen, ob das Kind auf dem Rücken liegt, ob das Gesicht frei ist und ob lose Dinge im Bett liegen. Lass die Seite leer, um das zu überspringen; alles andere funktioniert auch ohne.\n\nDas Modell selbst wird einmal in Home Assistant hinzugefügt, nicht hier: Einstellungen > Geräte & Dienste > Integration hinzufügen > Google Gemini oder OpenRouter (dort trägst du den API-Schlüssel ein). Danach erscheint die KI-Aufgabe in der Liste unten. Ein lokales Modell über Ollama funktioniert genauso.",
+        "data": {
+          "ai_task_entities": "KI-Aufgabe",
+          "ai_consent": "Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden",
+          "ai_calls_per_hour": "KI-Aufrufe pro Stunde höchstens"
+        },
+        "data_description": {
+          "ai_task_entities": "Wählst du mehrere, werden sie in dieser Reihenfolge gefragt, und die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
+          "ai_consent": "Nötig, um die KI-Bewertung zu nutzen. Prüfe in den Bedingungen deines Anbieters, wie Bilder verwendet werden. Ist das gesetzt, läuft die Bewertung von selbst, solange die Überwachung an ist; der Schalter „KI-Bewertung“ pausiert sie."
+        }
+      },
+      "devices": {
+        "title": "Weitere Geräte und Einstellungen",
+        "description": "Alles hier ist optional.",
+        "data": {
+          "smoke_entities": "Rauch- und CO-Melder",
+          "internet_entity": "Sensor für die Internetverbindung",
+          "vox_media_player": "Lautsprecher für die Ton-Weiterleitung",
+          "frigate_topic_prefix": "MQTT-Präfix von Frigate",
+          "dashboard_path": "Dashboard, das eine Benachrichtigung öffnet"
+        },
+        "data_description": {
           "smoke_entities": "Werden als kritische Alarme durchgereicht, auch wenn die Überwachung aus ist.",
-          "internet_entity": "Solange er aus ist, löst der lokale Alarm sofort aus.",
-          "ai_task_entities": "Die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
-          "ai_consent": "Nötig, um die KI-Bewertung zu nutzen. Prüfe in den Bedingungen deines Anbieters, wie Bilder verwendet werden."
+          "internet_entity": "Solange er aus ist, löst der lokale Alarm sofort aus."
         }
       }
     },

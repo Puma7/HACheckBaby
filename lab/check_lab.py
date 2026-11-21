@@ -61,6 +61,13 @@ OPTIONS = {
 }
 
 
+OPTION_PAGES = {
+    "notify": ["notify_services", "local_alarm_entities", "babysitter_service", "heartbeat_buttons"],
+    "ai": ["ai_task_entities", "ai_consent", "ai_calls_per_hour"],
+    "devices": ["smoke_entities", "internet_entity", "vox_media_player", "frigate_topic_prefix", "dashboard_path"],
+}
+
+
 class Run:
     """One lab run: the world, and the list of what was checked."""
 
@@ -217,11 +224,12 @@ async def setup_through_the_frontend_api(run: Run) -> None:
             {"child_name": CHILD, "birth_date": "2027-02-14"},
             PLACE,
             {"notify_services": [PARENT_A, PARENT_B], "local_alarm_entities": ["switch.lab_siren"]},
+            {"ai_task_entities": ["ai_task.lab_ai"], "ai_consent": True},
             {"acknowledged": True},
         ],
     )
     steps = [result.get("step_id") for result in results[:-1]]
-    run.check("setup dialog walks child, place, notify, disclaimer", steps == ["user", "place", "notify", "disclaimer"], steps)
+    run.check("setup dialog walks child, place, notify, AI, disclaimer", steps == ["user", "place", "notify", "ai", "disclaimer"], steps)
     forms_ok = all(isinstance(result.get("data_schema"), list) and result["data_schema"] for result in results[:-1])
     fields = {result["step_id"]: [field["name"] for field in result["data_schema"]] for result in results[:-1]}
     run.check("every form reaches the frontend as a field list", forms_ok, {k: len(v) for k, v in fields.items()})
@@ -235,9 +243,14 @@ async def setup_through_the_frontend_api(run: Run) -> None:
     run.entry_id = created["result"]["entry_id"]
     await run.until("entry is loaded", lambda: "loaded" in str(run.hass.config_entries.async_get_entry(run.entry_id).state).lower(), 20)
 
-    results = await api.flow("options", run.entry_id, [OPTIONS])
-    run.check("options form has all fields and saves", results[-1]["type"] == "create_entry", [f["name"] for f in results[0]["data_schema"]][:4])
-    await asyncio.sleep(2)  # the entry reloads
+    saved = []
+    for page, keys in OPTION_PAGES.items():
+        results = await api.flow("options", run.entry_id, [{"next_step_id": page}, {key: OPTIONS[key] for key in keys}])
+        saved.append(results[0]["type"] == "menu" and results[-1]["type"] == "create_entry")
+        await asyncio.sleep(2)  # the entry reloads
+    stored = dict(run.hass.config_entries.async_get_entry(run.entry_id).options)
+    run.check("the three options pages save and keep each other's settings", all(saved) and stored == OPTIONS,
+              sorted(set(OPTIONS) - set(stored)))
 
     results = await api.flow(
         "subentry", [run.entry_id, "sleep_place"], [{"name": "Pram", "cry_entity": "binary_sensor.lab_door"}]

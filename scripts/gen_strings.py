@@ -20,8 +20,15 @@ def build(t):
     opt_keys = ["notify_services", "local_alarm_entities", "babysitter_service", "heartbeat_buttons", "smoke_entities",
         "internet_entity", "vox_media_player", "ai_task_entities", "ai_consent", "ai_calls_per_hour",
         "frigate_topic_prefix", "dashboard_path"]
-    opt_data = {k: t[f"opt.{k}"] for k in opt_keys}
-    opt_desc = {k: t[f"opt_desc.{k}"] for k in opt_keys if f"opt_desc.{k}" in t}
+    sections = {
+        "notify": ["notify_services", "local_alarm_entities", "babysitter_service", "heartbeat_buttons"],
+        "ai": ["ai_task_entities", "ai_consent", "ai_calls_per_hour"],
+        "devices": ["smoke_entities", "internet_entity", "vox_media_player", "frigate_topic_prefix", "dashboard_path"],
+    }
+    assert sorted(sum(sections.values(), [])) == sorted(opt_keys)
+    def page(keys, title, desc):
+        return {"title": t[title], "description": t[desc], "data": {k: t[f"opt.{k}"] for k in keys},
+                "data_description": {k: t[f"opt_desc.{k}"] for k in keys if f"opt_desc.{k}" in t}}
     place_errors = {"name_required": t["err.name_required"], "no_sound_source": t["err.no_sound_source"]}
     target_errors = {"no_alert_target": t["err.no_alert_target"], "ai_consent_required": t["err.ai_consent_required"]}
     def names(domain, keys):
@@ -60,13 +67,21 @@ def build(t):
                          "data_description": {"child_name": t["user.child_name.desc"], "birth_date": t["user.birth_date.desc"]}},
                 "place": {"title": t["place.title"], "description": t["place.desc"], "data": place_data, "data_description": place_desc},
                 "notify": {"title": t["notify.title"], "description": t["notify.desc"], "data": notify_data, "data_description": notify_desc},
+                "ai": page(["ai_task_entities", "ai_consent"], "ai.title", "ai.desc"),
                 "disclaimer": {"title": t["disc.title"], "description": t["disc.desc"], "data": {"acknowledged": t["disc.ack"]}},
             },
             "error": {**place_errors, **target_errors, "must_acknowledge": t["err.must_acknowledge"]},
             "abort": {"already_configured": t["abort.already_configured"]},
+            "create_entry": {"default": t["created"]},
         },
         "options": {
-            "step": {"init": {"title": t["opt.title"], "description": t["opt.desc"], "data": opt_data, "data_description": opt_desc}},
+            "step": {
+                "init": {"title": t["opt.title"], "description": t["opt.desc"],
+                         "menu_options": {k: t[f"opt.menu.{k}"] for k in sections}},
+                "notify": page(sections["notify"], "opt.menu.notify", "notify.desc"),
+                "ai": page(sections["ai"], "ai.title", "ai.desc"),
+                "devices": page(sections["devices"], "opt.menu.devices", "opt.devices.desc"),
+            },
             "error": target_errors,
         },
         "config_subentries": {
@@ -118,10 +133,14 @@ EN = {
  "place_desc.audio_stream_url": "Played on the parents' speaker by the audio relay, for example an audio stream from go2rtc.",
  "place_desc.cry_entity": "Alternative to Frigate, for example the crying detection of the camera itself.",
  "notify.title": "Who is told", "notify.desc": "Choose the phones that receive alerts and, if you have one, a local alarm that works without internet. At least one of the two is required.",
- "opt.title": "CheckBaby options", "opt.desc": "Who is told, and what else is connected. Sleep places are managed as separate entries of the child.",
+ "opt.title": "CheckBaby options", "opt.desc": "Pick what you want to change. Sleep places are managed on the page of the entry itself: add or change them there.",
+ "opt.menu.notify": "Who is told", "opt.menu.ai": "AI assessment", "opt.menu.devices": "Other devices and settings",
+ "opt.devices.desc": "Everything here is optional.",
+ "ai.title": "AI assessment (optional)", "ai.desc": "An AI model can look at a camera picture and say whether the child lies on its back, whether the face is free and whether loose things are in the bed. Leave this page empty to skip it; everything else works without it.\n\nThe model itself is added once in Home Assistant, not here: Settings > Devices & services > Add integration > Google Gemini or OpenRouter (you enter the API key there). After that the AI task appears in the list below. A local model through Ollama works the same way.",
+ "created": "Done. Two things before the first night: switch on \"Monitoring\" on the device page when the child sleeps, and press \"Test alert\" once to check that the alert arrives on every phone, also when it is muted.",
  "opt.notify_services": "Phones", "opt.local_alarm_entities": "Local alarm (siren, light, switch)", "opt.babysitter_service": "Babysitter's phone",
  "opt.heartbeat_buttons": "Dead-man heartbeat buttons", "opt.smoke_entities": "Smoke and CO detectors", "opt.internet_entity": "Internet connectivity sensor",
- "opt.vox_media_player": "Speaker for the audio relay", "opt.ai_task_entities": "AI tasks, in order of preference", "opt.ai_consent": "Images of the child may be sent to these AI tasks",
+ "opt.vox_media_player": "Speaker for the audio relay", "opt.ai_task_entities": "AI task", "opt.ai_consent": "Images of the child may be sent to these AI tasks",
  "opt.ai_calls_per_hour": "AI calls per hour at most", "opt.frigate_topic_prefix": "Frigate MQTT topic prefix", "opt.dashboard_path": "Dashboard opened from a notification",
  "opt_desc.notify_services": "Notify services of the Home Assistant companion app. Critical alerts go to all of them.",
  "opt_desc.local_alarm_entities": "Switched on when an alert stays unanswered for a minute, or at once if the internet is down. Put it where you sleep, never in the child's room.",
@@ -129,8 +148,8 @@ EN = {
  "opt_desc.heartbeat_buttons": "Pressed every 30 seconds while monitoring is armed and healthy, so that a separate device can sound when Home Assistant fails.",
  "opt_desc.smoke_entities": "Passed through as critical alerts, even while monitoring is off.",
  "opt_desc.internet_entity": "While it is off, the local alarm fires at once.",
- "opt_desc.ai_task_entities": "The first one that answers is used. A cloud model receives camera images of the child; a local model keeps them at home.",
- "opt_desc.ai_consent": "Required to use the AI assessment. Check your provider's terms on how images are used.",
+ "opt_desc.ai_task_entities": "If you choose several, they are asked in this order and the first one that answers is used. A cloud model receives camera pictures of the child; a local model keeps them at home.",
+ "opt_desc.ai_consent": "Required to use the AI assessment. Check your provider's terms on how pictures are used. With this set, the assessment runs by itself while monitoring is on; the switch \"AI assessment\" pauses it.",
  "err.name_required": "Enter a name.", "err.no_sound_source": "Enter a Frigate camera or choose a crying sensor: without a sound source the monitor cannot hear the child.",
  "err.no_alert_target": "Choose at least one phone or a local alarm; otherwise no alert could reach anyone.", "err.ai_consent_required": "Confirm that images may be sent, or remove the AI tasks.",
  "err.must_acknowledge": "Confirm the notice to continue.", "abort.already_configured": "A child with this name is already set up.",
@@ -205,10 +224,14 @@ DE = {
  "place_desc.audio_stream_url": "Wird von der Ton-Weiterleitung auf dem Lautsprecher der Eltern abgespielt, zum Beispiel ein Ton-Stream aus go2rtc.",
  "place_desc.cry_entity": "Alternative zu Frigate, zum Beispiel die Wein-Erkennung der Kamera selbst.",
  "notify.title": "Wer benachrichtigt wird", "notify.desc": "Wähle die Handys, die Alarme bekommen, und falls vorhanden einen lokalen Alarm, der ohne Internet funktioniert. Mindestens eines von beiden ist nötig.",
- "opt.title": "CheckBaby-Optionen", "opt.desc": "Wer benachrichtigt wird und was sonst angeschlossen ist. Schlafplätze werden als eigene Einträge des Kindes verwaltet.",
+ "opt.title": "CheckBaby-Optionen", "opt.desc": "Wähle, was du ändern möchtest. Schlafplätze verwaltest du auf der Seite des Eintrags selbst: dort hinzufügen oder ändern.",
+ "opt.menu.notify": "Wer benachrichtigt wird", "opt.menu.ai": "KI-Bewertung", "opt.menu.devices": "Weitere Geräte und Einstellungen",
+ "opt.devices.desc": "Alles hier ist optional.",
+ "ai.title": "KI-Bewertung (optional)", "ai.desc": "Ein KI-Modell kann ein Kamerabild ansehen und sagen, ob das Kind auf dem Rücken liegt, ob das Gesicht frei ist und ob lose Dinge im Bett liegen. Lass die Seite leer, um das zu überspringen; alles andere funktioniert auch ohne.\n\nDas Modell selbst wird einmal in Home Assistant hinzugefügt, nicht hier: Einstellungen > Geräte & Dienste > Integration hinzufügen > Google Gemini oder OpenRouter (dort trägst du den API-Schlüssel ein). Danach erscheint die KI-Aufgabe in der Liste unten. Ein lokales Modell über Ollama funktioniert genauso.",
+ "created": "Fertig. Zwei Dinge vor der ersten Nacht: Schalte auf der Geräteseite „Überwachung“ ein, wenn das Kind schläft, und drücke einmal „Testalarm“, um zu prüfen, dass der Alarm auf jedem Handy ankommt, auch stumm geschaltet.",
  "opt.notify_services": "Handys", "opt.local_alarm_entities": "Lokaler Alarm (Sirene, Licht, Schalter)", "opt.babysitter_service": "Handy des Babysitters",
  "opt.heartbeat_buttons": "Herzschlag-Tasten für den Dead-Man-Summer", "opt.smoke_entities": "Rauch- und CO-Melder", "opt.internet_entity": "Sensor für die Internetverbindung",
- "opt.vox_media_player": "Lautsprecher für die Ton-Weiterleitung", "opt.ai_task_entities": "KI-Aufgaben, in bevorzugter Reihenfolge", "opt.ai_consent": "Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden",
+ "opt.vox_media_player": "Lautsprecher für die Ton-Weiterleitung", "opt.ai_task_entities": "KI-Aufgabe", "opt.ai_consent": "Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden",
  "opt.ai_calls_per_hour": "KI-Aufrufe pro Stunde höchstens", "opt.frigate_topic_prefix": "MQTT-Präfix von Frigate", "opt.dashboard_path": "Dashboard, das eine Benachrichtigung öffnet",
  "opt_desc.notify_services": "Benachrichtigungsdienste der Home-Assistant-App. Kritische Alarme gehen an alle.",
  "opt_desc.local_alarm_entities": "Wird eingeschaltet, wenn ein Alarm eine Minute unbeantwortet bleibt, oder sofort, wenn das Internet ausgefallen ist. Gehört ins Elternschlafzimmer, nie ins Kinderzimmer.",
@@ -216,8 +239,8 @@ DE = {
  "opt_desc.heartbeat_buttons": "Werden alle 30 Sekunden gedrückt, solange die Überwachung scharf und störungsfrei ist. So kann ein eigenes Gerät Alarm geben, wenn Home Assistant ausfällt.",
  "opt_desc.smoke_entities": "Werden als kritische Alarme durchgereicht, auch wenn die Überwachung aus ist.",
  "opt_desc.internet_entity": "Solange er aus ist, löst der lokale Alarm sofort aus.",
- "opt_desc.ai_task_entities": "Die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
- "opt_desc.ai_consent": "Nötig, um die KI-Bewertung zu nutzen. Prüfe in den Bedingungen deines Anbieters, wie Bilder verwendet werden.",
+ "opt_desc.ai_task_entities": "Wählst du mehrere, werden sie in dieser Reihenfolge gefragt, und die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
+ "opt_desc.ai_consent": "Nötig, um die KI-Bewertung zu nutzen. Prüfe in den Bedingungen deines Anbieters, wie Bilder verwendet werden. Ist das gesetzt, läuft die Bewertung von selbst, solange die Überwachung an ist; der Schalter „KI-Bewertung“ pausiert sie.",
  "err.name_required": "Bitte einen Namen eingeben.", "err.no_sound_source": "Bitte eine Frigate-Kamera eintragen oder einen Wein-Sensor wählen: Ohne Tonquelle kann die Überwachung das Kind nicht hören.",
  "err.no_alert_target": "Bitte mindestens ein Handy oder einen lokalen Alarm wählen; sonst könnte kein Alarm jemanden erreichen.", "err.ai_consent_required": "Bitte bestätigen, dass Bilder gesendet werden dürfen, oder die KI-Aufgaben entfernen.",
  "err.must_acknowledge": "Bitte den Hinweis bestätigen, um fortzufahren.", "abort.already_configured": "Ein Kind mit diesem Namen ist bereits eingerichtet.",

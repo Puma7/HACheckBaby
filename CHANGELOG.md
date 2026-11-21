@@ -1,6 +1,18 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.0.3 (unreleased)
+
+- Setup: a new optional page for the AI assessment, with a note on where the model itself is added (Google Gemini, OpenRouter or a local model, as their own Home Assistant integrations).
+- Options: three short pages (who is told, AI assessment, other devices) instead of one long form.
+- The switch "AI assessment" is on by default and only pauses the assessment; it runs once an AI task and the consent are set.
+- After setup, a note says to switch on "Monitoring" and to press "Test alert" once.
+- The version number now follows the release tags.
+
+## 0.0.2
+
+Fixes found by the lab (a real Home Assistant with simulated devices): a false "attended" state for 20 seconds after every start, a critical monitoring failure for a radar without a reading while the breathing-movement alert was off, a local alarm that came late after the step to critical, and a state that lagged behind the crying warning.
+
+## 0.0.1
 
 First version that monitors. Everything listed is covered by automated tests against Home Assistant 2026.2 and 2026.10. Nothing has run against a real Frigate, camera, phone or radar sensor yet. CheckBaby is not a medical device.
 

@@ -18,7 +18,9 @@ class Settings:
     armed: bool = False
     mode: Mode = Mode.NIGHT
     privacy: bool = False
-    ai_enabled: bool = False
+    # On by default: the assessment only runs once AI tasks and consent are set
+    # in the options, so this switch is a pause button, not a second place to enable it.
+    ai_enabled: bool = True
     breathing_alert: bool = False
     vox_enabled: bool = False
     on_duty: str = ON_DUTY_ALL

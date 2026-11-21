@@ -57,6 +57,7 @@ async def _ensure_setup(hass: Any, broker_port: int) -> str:
                 {"child_name": CHILD, "birth_date": "2027-02-14"},
                 PLACE,
                 {"notify_services": OPTIONS["notify_services"], "local_alarm_entities": OPTIONS["local_alarm_entities"]},
+                {"ai_task_entities": OPTIONS["ai_task_entities"], "ai_consent": True},
                 {"acknowledged": True},
             ],
         )

@@ -22,6 +22,8 @@ from custom_components.checkbaby.const import (
     CONF_LOCAL_ALARM,
     CONF_NOTIFY_SERVICES,
     CONF_PLACE_NAME,
+    CONF_SMOKE_ENTITIES,
+    CONF_VOX_PLAYER,
     DOMAIN,
     SUBENTRY_PLACE,
 )
@@ -48,6 +50,14 @@ async def test_flow_creates_child_with_place_and_targets(hass: HomeAssistant) ->
     result = await hass.config_entries.flow.async_configure(result["flow_id"], PLACE_INPUT)
     assert result["step_id"] == "notify"
     result = await hass.config_entries.flow.async_configure(result["flow_id"], NOTIFY_INPUT)
+    assert result["step_id"] == "ai"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_AI_ENTITIES: ["ai_task.gemini"], CONF_AI_CONSENT: False}
+    )
+    assert (result["step_id"], result["errors"]) == ("ai", {CONF_AI_CONSENT: "ai_consent_required"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_AI_ENTITIES: ["ai_task.gemini"], CONF_AI_CONSENT: True}
+    )
     assert result["step_id"] == "disclaimer"
 
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_ACKNOWLEDGED: True})
@@ -59,6 +69,7 @@ async def test_flow_creates_child_with_place_and_targets(hass: HomeAssistant) ->
     entry = result["result"]
     assert entry.unique_id == "testkind"
     assert entry.options[CONF_NOTIFY_SERVICES] == [PARENT_A]
+    assert (entry.options[CONF_AI_ENTITIES], entry.options[CONF_AI_CONSENT]) == (["ai_task.gemini"], True)
     places = list(entry.subentries.values())
     assert [(place.subentry_type, place.title) for place in places] == [(SUBENTRY_PLACE, "Crib")]
     assert places[0].data[CONF_FRIGATE_CAMERA] == "nursery"
@@ -66,7 +77,8 @@ async def test_flow_creates_child_with_place_and_targets(hass: HomeAssistant) ->
 
 
 async def test_no_entry_without_acknowledgement(hass: HomeAssistant) -> None:
-    result = await _to_step(hass, USER_INPUT, PLACE_INPUT, NOTIFY_INPUT, {CONF_ACKNOWLEDGED: False})
+    # The AI page is left empty: the assessment is optional.
+    result = await _to_step(hass, USER_INPUT, PLACE_INPUT, NOTIFY_INPUT, {}, {CONF_ACKNOWLEDGED: False})
 
     assert (result["type"], result["step_id"]) == (FlowResultType.FORM, "disclaimer")
     assert result["errors"] == {CONF_ACKNOWLEDGED: "must_acknowledge"}
@@ -110,15 +122,24 @@ async def test_alerts_need_somewhere_to_go(hass: HomeAssistant) -> None:
     assert (result["step_id"], result["errors"]) == ("notify", {"base": "no_alert_target"})
 
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_LOCAL_ALARM: ["siren.bedroom"]})
-    assert result["step_id"] == "disclaimer"
+    assert result["step_id"] == "ai"
 
 
-async def test_options_flow_saves_and_reloads(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def _options_page(hass: HomeAssistant, entry: MockConfigEntry, page: str) -> Any:
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert (result["type"], result["menu_options"]) == (FlowResultType.MENU, ["notify", "ai", "devices"])
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": page})
+    assert (result["type"], result["step_id"]) == (FlowResultType.FORM, page)
+    return result
+
+
+async def test_options_page_saves_its_own_settings_and_reloads(
+    hass: HomeAssistant, config_entry: MockConfigEntry
+) -> None:
     await setup(hass, config_entry)
     first = config_entry.runtime_data.coordinator
 
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
-    assert (result["type"], result["step_id"]) == (FlowResultType.FORM, "init")
+    result = await _options_page(hass, config_entry, "notify")
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {CONF_NOTIFY_SERVICES: [PARENT_A], CONF_LOCAL_ALARM: []}
     )
@@ -126,23 +147,46 @@ async def test_options_flow_saves_and_reloads(hass: HomeAssistant, config_entry:
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert config_entry.options[CONF_NOTIFY_SERVICES] == [PARENT_A]
+    assert config_entry.options[CONF_LOCAL_ALARM] == []
     assert config_entry.runtime_data.coordinator is not first
 
 
-async def test_options_require_consent_for_ai_and_a_target(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+async def test_options_pages_keep_each_others_settings(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
     await setup(hass, config_entry)
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
 
+    result = await _options_page(hass, config_entry, "ai")
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {CONF_AI_ENTITIES: ["ai_task.gemini"]})
+    assert result["errors"] == {CONF_AI_CONSENT: "ai_consent_required"}
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_NOTIFY_SERVICES: [], CONF_AI_ENTITIES: ["ai_task.gemini"]}
+        result["flow_id"], {CONF_AI_ENTITIES: ["ai_task.gemini"], CONF_AI_CONSENT: True}
     )
-    assert result["errors"] == {"base": "no_alert_target", CONF_AI_CONSENT: "ai_consent_required"}
-
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {CONF_NOTIFY_SERVICES: [PARENT_A], CONF_AI_ENTITIES: ["ai_task.gemini"], CONF_AI_CONSENT: True},
-    )
+    await hass.async_block_till_done()
     assert result["type"] is FlowResultType.CREATE_ENTRY
+
+    result = await _options_page(hass, config_entry, "devices")
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_SMOKE_ENTITIES: ["binary_sensor.smoke"], CONF_VOX_PLAYER: "media_player.bedroom"}
+    )
+    await hass.async_block_till_done()
+
+    options = config_entry.options
+    assert options[CONF_NOTIFY_SERVICES] == [PARENT_A, "mobile_app_parent_b"]  # untouched by the other pages
+    assert (options[CONF_AI_ENTITIES], options[CONF_AI_CONSENT]) == (["ai_task.gemini"], True)
+    assert options[CONF_SMOKE_ENTITIES] == ["binary_sensor.smoke"]
+
+    # Clearing a field on one page removes it and leaves the rest alone.
+    result = await _options_page(hass, config_entry, "devices")
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {CONF_SMOKE_ENTITIES: []})
+    await hass.async_block_till_done()
+    assert CONF_VOX_PLAYER not in config_entry.options
+    assert config_entry.options[CONF_AI_CONSENT] is True
+
+
+async def test_options_cannot_remove_the_last_alert_target(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
+    await setup(hass, config_entry)
+    result = await _options_page(hass, config_entry, "notify")
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {CONF_NOTIFY_SERVICES: []})
+    assert result["errors"] == {"base": "no_alert_target"}
 
 
 async def test_add_and_change_a_sleep_place(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:
