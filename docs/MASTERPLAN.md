@@ -616,6 +616,10 @@ Stand 21.11.2026. „Getestet" heißt hier: durch automatische Tests abgedeckt, 
 - **KI bekommt ein Einzelbild**, keine Bildserie. `ai_task` liefert pro Kamera nur das aktuelle Bild. Die Bestätigung läuft über einen zweiten Blick nach 15 Sekunden.
 - **Bauchlage** wird nur beim Neugeborenen nach Bestätigung kritisch, beim Säugling bleibt sie eine Warnung, weil sich ältere Säuglinge selbst drehen dürfen.
 - **Ein unsicheres „alles in Ordnung" der KI** nimmt eine KI-Warnung nicht zurück.
+- **Stille nach einer großen Bewegung zählt nicht als „keine Atembewegung".** Wer das Kind herausnimmt, erzeugt genau dieses Muster: Bewegung, dann nichts. Ohne Präsenzsensor ließe sich ein leeres Bett sonst nicht von einem Atemstillstand unterscheiden und würde jeden Morgen einen kritischen Alarm auslösen. Die Quelle muss erst wieder Atmung sehen, bevor Stille zählt; dasselbe gilt, nachdem jemand beim Kind war. Der Preis: Ein Aussetzen direkt nach einer großen Bewegung wird nicht erkannt, bis wieder Atmung gesehen wurde. Ein Präsenzsensor für das Bett bleibt die bessere Lösung.
+- **Ein Radarwert, der zwei Minuten nicht neu gemeldet wurde, gilt als Störung**, nicht als fortgesetzte Atmung.
+- **Schlummern verschiebt die Frist „niemand reagiert"** beim Weinen: Wer „5 min Ruhe" drückt, hat reagiert.
+- **Der Privatmodus sperrt jeden KI-Aufruf**, auch den von Hand ausgelösten.
 - **Mindestversion** ist Home Assistant 2026.2, weil gegen ältere Versionen nicht getestet wird.
 
 ### Noch nicht umgesetzt

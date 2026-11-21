@@ -11,6 +11,9 @@ Read `docs/MASTERPLAN.md` (German) before changing behaviour: it holds the archi
 - The AI assessment may add to an alert or raise it; it must never suppress a warning or critical alert that came from a deterministic source.
 - A source that is missing or unusable is never reported as "all fine".
 - Critical alerts ignore cooldowns.
+- Silence only counts as "no breathing movement" after breathing was seen, with no large movement since. Do not relax this without real data: an empty bed looks the same as a child that does not move.
+- In privacy mode no image is sent to an AI task, not even on request.
+- The local alarm follows the state of the alerts (`AlertManager.local_wanted`), never single events.
 - The integration does no video processing inside the Home Assistant process.
 - Wording: this is not a medical device. Say "breathing-movement hint", not "breathing monitoring" or "SIDS protection".
 - Never commit footage or audio of real children.
