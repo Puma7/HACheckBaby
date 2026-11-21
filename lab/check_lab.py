@@ -550,6 +550,14 @@ async def main(long: bool, only: list[str]) -> int:
                 except Exception as error:  # noqa: BLE001 - one broken scenario must not hide the others
                     run.check(f"{scenario.__name__} ran to the end", False, f"{type(error).__name__}: {error}")
                     traceback.print_exc()
+                    if run.hass is not None:
+                        site = getattr(run.hass.http, "site", None)
+                        server = getattr(site, "_server", None)
+                        print(
+                            f"      Home Assistant state={run.hass.state} http site={site is not None} "
+                            f"serving={server.is_serving() if server is not None else None}",
+                            flush=True,
+                        )
         finally:
             run.stop_engine()
             if run.sim is not None:
