@@ -41,7 +41,7 @@ class Engine:
         """Take at most one frame, then evaluate and publish if it is time.
 
         A source that fails or delivers nothing must not stop the reporting:
-        the analyzer then answers ``unusable`` because its frames are stale.
+        the analyzer answers ``unusable`` as soon as its newest frame is stale.
         """
         try:
             frame = self._source.read(self._read_timeout_s)
@@ -54,7 +54,6 @@ class Engine:
             if not self._source_failed:  # log once, not on every retry
                 _LOGGER.warning("frame source failed: %s", type(err).__name__)
                 self._source_failed = True
-            self._analyzer.reset()
             self._sleep(self._read_timeout_s)
         now = self._clock()
         if self._last_eval is not None and 0.0 <= now - self._last_eval < self._eval_interval_s:

@@ -156,8 +156,10 @@ def test_rtsp_source_reconnects_with_backoff_and_masks_the_url(caplog: pytest.Lo
 
     def opener(url: str) -> FakeContainer:
         attempts.append(time.monotonic())
-        if len(attempts) <= 3:
+        if len(attempts) == 1:
             raise OSError(f"Connection refused: '{url}'")  # FFmpeg-style text with the full URL
+        if len(attempts) <= 3:
+            raise OSError("401 Unauthorized (viewer / s3cr3t-pw)")  # the password on its own
         if len(attempts) == 4:
             # A stream that delivers and then breaks.
             return FakeContainer([FakeAvFrame(i / 8.0) for i in range(4)], clock, OSError("timeout"))
@@ -179,6 +181,7 @@ def test_rtsp_source_reconnects_with_backoff_and_masks_the_url(caplog: pytest.Lo
     text = caplog.text
     assert "stream error" in text and "stream open" in text
     assert "s3cr3t-pw" not in text
+    assert "401 Unauthorized (viewer / ***)" in text
     assert "rtsp://viewer:***@camera.local:554/sub" in text
 
 

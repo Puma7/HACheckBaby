@@ -91,6 +91,11 @@ def estimate_periodicity(
     column per signal (for example per image block). The power spectra of the
     columns are averaged, so columns that move in opposite directions do not
     cancel and the noise floor becomes smooth.
+
+    The default ``periodic_confidence`` is only meaningful with many columns
+    (the analyzer uses one per image block). With a single column the noise
+    floor is ragged, and pure white noise exceeds that threshold in roughly
+    one window out of eight (25 s) to one out of three (12 s).
     """
     t = np.asarray(timestamps, dtype=np.float64)
     x = np.asarray(signals, dtype=np.float64)

@@ -92,8 +92,12 @@ class FakeMqttClient:
     def loop_stop(self) -> None:
         self.calls.append(("loop_stop",))
 
-    def publish(self, topic: str, payload: str, qos: int, retain: bool) -> None:
+    def publish(self, topic: str, payload: str, qos: int, retain: bool) -> FakeMqttClient:
         self.messages.append(Message(topic, payload, qos, retain))
+        return self  # stands in for paho's MQTTMessageInfo
+
+    def wait_for_publish(self, timeout: float | None = None) -> None:
+        self.calls.append(("wait_for_publish", timeout))
 
     def disconnect(self) -> None:
         self.calls.append(("disconnect",))

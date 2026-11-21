@@ -606,7 +606,8 @@ Stand 21.11.2026. „Getestet" heißt hier: durch automatische Tests abgedeckt, 
 
 ### Geschrieben, aber nur eingeschränkt prüfbar
 
-- **Vital-Engine** (`engine/`): eigener Dienst für die Atem-Mikrobewegung aus dem Videobild. Die Signalverarbeitung ist mit künstlichen Signalen getestet; gegen einen echten Kamerastream, als Container und als Add-on ist sie ungeprüft. Details in `engine/README.md`.
+- **Vital-Engine** (`engine/`): eigener Dienst für die Atem-Mikrobewegung aus dem Videobild, mit 189 eigenen Tests. Geprüft mit künstlichen Signalen, als Container gegen einen echten MQTT-Broker und gegen einen künstlichen RTSP-Videostrom. Ungeprüft: jede echte Kamera, go2rtc als Quelle, das Add-on-Paket. Alle Schwellen sind nur an künstlichen Bildern eingestellt. Details und Grenzen in `engine/README.md`.
+- **Verzögerung des Atembewegungs-Hinweises über die Engine:** Die Engine meldet „keine Bewegung" bauartbedingt erst 18 bis 21 Sekunden nach dem letzten Atemzug, danach wartet die Integration die eingestellte Zeit (mindestens 20 Sekunden). Zusammen sind das rund 40 Sekunden. Ob das verkürzt werden kann, ohne Fehlalarme zu erzeugen, lässt sich erst mit echten Daten aus dem Schattenmodus entscheiden.
 - **Beispiele** (`docs/examples/`, `blueprints/`): Dashboard, Frigate-Konfiguration, ESPHome für Radar und Dead-Man-Summer, Automations-Vorlagen. Syntaktisch geprüft, nie auf einem Gerät gelaufen.
 
 ### Abweichungen vom Plan

@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from checkbaby_engine import config as config_module
-from checkbaby_engine.config import DEFAULTS, Config, ConfigError, Roi, load_config, mask_url
+from checkbaby_engine.config import DEFAULTS, Config, ConfigError, Roi, load_config, mask_url, redact
 from checkbaby_engine.signal import SignalConfig
 
 ENGINE_DIR = Path(__file__).resolve().parent.parent
@@ -152,6 +152,14 @@ def test_mask_url(url: str, masked: str) -> None:
     assert mask_url(url) == masked
     for secret in ("c4m-s3cr3t", "p@ss/w:rd", "t0ken-only", "hunter2", "pw", "abc"):
         assert secret not in mask_url(url)
+
+
+def test_redact_removes_a_urls_secrets_from_other_text() -> None:
+    url = "rtsp://viewer:c4m-s3cr3t@cam/live?token=abc123"
+    text = f"open '{url}' failed: bad password c4m-s3cr3t, query token=abc123"
+    assert redact(text, url) == "open 'rtsp://viewer:***@cam/live?***' failed: bad password ***, query ***"
+    assert redact("401 for t0ken", "rtsp://t0ken@cam/live") == "401 for ***"
+    assert redact("nothing secret here", "rtsp://cam/live") == "nothing secret here"
 
 
 def test_config_never_shows_credentials() -> None:

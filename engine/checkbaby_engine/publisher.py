@@ -106,7 +106,7 @@ class Publisher:
         info = self._client.publish(self.availability_topic, OFFLINE, qos=1, retain=True)
         try:
             info.wait_for_publish(timeout=2.0)
-        except (AttributeError, RuntimeError, ValueError):
+        except (RuntimeError, ValueError):
             pass  # not connected: the broker's last will has already said offline
         self._client.disconnect()
         self._client.loop_stop()

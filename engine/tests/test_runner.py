@@ -73,9 +73,8 @@ def test_breathing_scene_ends_up_as_periodic_state_messages() -> None:
     stamps = [s["ts"] for s in states]
     assert stamps[0] == pytest.approx(clock.now - 40.0)
     assert max(b - a for a, b in zip(stamps, stamps[1:], strict=False)) <= 2.0 + 1e-6
-    # The change to periodic went out with the evaluation that found it, off the 2 s grid.
-    first = periodic[0]["ts"] - stamps[0]
-    assert first == pytest.approx(12.0, abs=1.01) and first % 2.0 != 0.0 or first == pytest.approx(12.0)
+    # Periodic is reported as soon as 12 s of frames are there.
+    assert periodic[0]["ts"] - stamps[0] == pytest.approx(12.0, abs=1.0)
 
 
 @pytest.mark.parametrize("failure", ["stall", "raise"])
@@ -97,8 +96,11 @@ def test_a_failing_source_keeps_publishing_unusable(failure: str, caplog: pytest
     stamps = [failed_at] + [s["ts"] for s in after]
     assert max(b - a for a, b in zip(stamps, stamps[1:], strict=False)) <= 2.0 + 1e-6
     assert stamps[-1] >= failed_at + 59.0
-    # ... and once the last frame is stale (2 s), nothing but unusable.
-    late = [s for s in after if s["ts"] > failed_at + 2.0 + 1.0]
+    # ... and once the last frame is stale (2 s) the change to unusable goes out with
+    # the next evaluation (1 s), not with the next 2 s tick; from then on nothing else.
+    first_unusable = min(s["ts"] for s in after if s["status"] == "unusable")
+    assert failed_at + 2.0 < first_unusable <= failed_at + 2.0 + 1.0 + source.step_s
+    late = [s for s in after if s["ts"] >= first_unusable]
     assert len(late) >= 25
     assert {s["status"] for s in late} == {"unusable"}
     assert {s["status"] for s in after} <= {"periodic", "unusable"}  # never no_motion

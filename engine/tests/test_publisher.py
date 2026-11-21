@@ -123,7 +123,8 @@ def test_stop_publishes_offline_retained_then_disconnects() -> None:
     publisher.stop()
     last = client.messages[-1]
     assert (last.topic, last.payload, last.retain) == ("checkbaby/engine/nursery/availability", "offline", True)
-    assert client.calls[-2:] == [("disconnect",), ("loop_stop",)]
+    # It waits for the offline message to leave before it hangs up.
+    assert client.calls[-3:] == [("wait_for_publish", 2.0), ("disconnect",), ("loop_stop",)]
 
 
 def test_the_fake_matches_the_real_paho_client() -> None:
@@ -142,6 +143,8 @@ def test_the_fake_matches_the_real_paho_client() -> None:
     for name, (args, kwargs) in calls.items():
         inspect.signature(getattr(real, name)).bind(*args, **kwargs)
         assert hasattr(FakeMqttClient, name)
+    info = real.publish("t", "payload", qos=1, retain=True)
+    inspect.signature(info.wait_for_publish).bind(timeout=2.0)
     real.on_connect = Publisher(MqttConfig(), "x", real)._on_connect
     # The v2 callback gets (client, userdata, flags, reason_code, properties).
     assert len(inspect.signature(real.on_connect).parameters) == 5

@@ -13,7 +13,7 @@ from typing import Any, Protocol
 import numpy as np
 import numpy.typing as npt
 
-from .config import Roi, mask_url
+from .config import Roi, mask_url, redact
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ class RtspSource:
                 _LOGGER.warning("stream ended: %s", masked)
             except Exception as err:  # PyAV raises many unrelated error types
                 # FFmpeg error texts can quote the URL including its password.
-                _LOGGER.warning("stream error on %s: %s", masked, str(err).replace(self._url, masked))
+                _LOGGER.warning("stream error on %s: %s", masked, redact(str(err), self._url))
             if self._stop.wait(delay):
                 return
             delay = min(delay * 2.0, self._backoff_s[1])

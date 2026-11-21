@@ -106,6 +106,17 @@ def mask_url(url: str) -> str:
     return head + sep + rest + ("?***" if query else "")
 
 
+def redact(text: str, url: str) -> str:
+    """Remove the secrets of ``url`` from a text, such as an FFmpeg error that quotes it."""
+    text = text.replace(url, mask_url(url))
+    rest, _, query = url.partition("://")[2].partition("?")
+    creds = rest.rpartition("@")[0]
+    for secret in (creds.partition(":")[2] or creds, query):
+        if secret:
+            text = text.replace(secret, "***")
+    return text
+
+
 def load_config(path: str | None = None, env: Mapping[str, str] | None = None) -> Config:
     """Build the configuration from an optional file plus the environment."""
     environ = os.environ if env is None else env

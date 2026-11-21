@@ -7,6 +7,7 @@ The property tested hardest: bad or missing data gives ``unusable`` and never
 from __future__ import annotations
 
 import math
+from functools import partial
 
 import numpy as np
 import pytest
@@ -28,7 +29,7 @@ STILL_OR_BREATHING = pytest.mark.parametrize("bpm", [0.0, 40.0], ids=["still", "
 
 def test_status_strings_are_the_wire_contract() -> None:
     assert {s.value for s in Status} == {"periodic", "gross_motion", "no_motion", "unusable"}
-    assert Status.PERIODIC == "periodic"
+    assert f"{Status.NO_MOTION}" == "no_motion"  # formats as the bare string
 
 
 # --- periodic -----------------------------------------------------------------
@@ -173,20 +174,20 @@ def test_too_little_data_is_unusable(bpm: float) -> None:
     assert {r.reason for _, r in results} == {"insufficient_data"}
 
 
-BAD_SCENES: dict[str, tuple[str, dict[str, float]]] = {
-    "dark": ("too_dark", {"brightness": 5.0, "contrast": 2.0}),
-    "saturated": ("saturated", {"brightness": 252.0, "contrast": 30.0}),
-    "covered_lens": ("low_contrast", {"contrast": 0.5}),
-    "covered_lens_with_gain_noise": ("low_contrast", {"contrast": 0.5, "noise_sigma": 6.0}),
-    "heavy_noise": ("too_noisy", {"noise_sigma": 30.0}),
+BAD_SCENES = {
+    "dark": ("too_dark", partial(SyntheticSource, brightness=5.0, contrast=2.0)),
+    "saturated": ("saturated", partial(SyntheticSource, brightness=252.0, contrast=30.0)),
+    "covered_lens": ("low_contrast", partial(SyntheticSource, contrast=0.5)),
+    "covered_lens_with_gain_noise": ("low_contrast", partial(SyntheticSource, contrast=0.5, noise_sigma=6.0)),
+    "heavy_noise": ("too_noisy", partial(SyntheticSource, noise_sigma=30.0)),
 }
 
 
 @STILL_OR_BREATHING
 @pytest.mark.parametrize("scene", BAD_SCENES)
 def test_bad_pictures_are_unusable(scene: str, bpm: float) -> None:
-    reason, kwargs = BAD_SCENES[scene]
-    results = analyze(SyntheticSource(breathing(bpm), duration_s=40.0, **kwargs))
+    reason, make_source = BAD_SCENES[scene]
+    results = analyze(make_source(breathing(bpm), duration_s=40.0))
     assert len(results) == 41
     assert statuses(results) == {"unusable"}
     assert {r.reason for _, r in results} == {reason}
