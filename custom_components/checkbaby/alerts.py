@@ -173,8 +173,10 @@ class AlertManager:
         alert = self.active.pop(kind, None)
         if alert is None:
             return
-        self._cleared_at[kind] = now
         if alert.notified and not alert.shadow:
+            # Only an alert that was on the phones can "flap back": a hint that
+            # ends must not swallow the first notification of a real warning.
+            self._cleared_at[kind] = now
             self._out.append(Notification(kind, alert.level, Stage.CLEARED, Audience.ALL, alert.detail))
 
     def acknowledge(self, now: float) -> int:

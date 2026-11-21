@@ -43,6 +43,29 @@ _EN: dict[str, str] = {
     "problem_notify": "a notification target is missing",
     "problem_sleep_place": "no sleep place is active",
     "problem_cry_sensor": "crying sensor unavailable",
+    "problem_local_alarm": "local alarm unreachable",
+    "delivery_sent": "Sent to: {names}.",
+    "delivery_failed": "Could NOT be sent to: {names}. Open the options of CheckBaby and check “Who is told”.",
+    "delivery_none": "No phone is chosen, so no push was sent.",
+    "delivery_local": "Local alarm: {names}. It switches on after a minute without “Seen”.",
+    "delivery_local_down": "Local alarm NOT reachable: {names}.",
+    "delivery_no_local": "No local alarm is set up.",
+    "delivery_hint": (
+        "Nothing on the phone? Check that the Home Assistant app is allowed to notify, "
+        "and on iOS that critical alerts are allowed."
+    ),
+    "ai_title": "AI check",
+    "ai_result": "{verdict} ({confidence} % sure). {reason}",
+    "ai_verdict_ok": "Looks fine",
+    "ai_verdict_attention": "Worth a look",
+    "ai_verdict_warning": "Please check",
+    "ai_verdict_critical": "Possible danger",
+    "ai_off_none": "No AI check: no AI task is chosen. Open the options of CheckBaby, “AI assessment”.",
+    "ai_off_consent": "No AI check: sending pictures is not confirmed in the options, “AI assessment”.",
+    "ai_off_privacy": "No AI check: privacy mode is on, so no picture leaves the house.",
+    "ai_off_camera": "No AI check: the active sleep place has no camera entity.",
+    "ai_off_busy": "An AI check is already running.",
+    "ai_failed": "The AI gave no usable answer: {error}",
     "state_empty": "not in bed",
     "state_asleep": "asleep",
     "state_restless": "restless",
@@ -95,6 +118,33 @@ _DE: dict[str, str] = {
     "problem_notify": "ein Benachrichtigungsziel fehlt",
     "problem_sleep_place": "kein Schlafplatz aktiv",
     "problem_cry_sensor": "Wein-Sensor nicht verfügbar",
+    "problem_local_alarm": "lokaler Alarm nicht erreichbar",
+    "delivery_sent": "Gesendet an: {names}.",
+    "delivery_failed": (
+        "NICHT gesendet an: {names}. Öffne die Optionen von CheckBaby und prüfe „Wer benachrichtigt wird“."
+    ),
+    "delivery_none": "Es ist kein Handy gewählt, deshalb wurde kein Push gesendet.",
+    "delivery_local": "Lokaler Alarm: {names}. Er schaltet nach einer Minute ohne „Gesehen“ ein.",
+    "delivery_local_down": "Lokaler Alarm NICHT erreichbar: {names}.",
+    "delivery_no_local": "Es ist kein lokaler Alarm eingerichtet.",
+    "delivery_hint": (
+        "Nichts auf dem Handy? Prüfe, ob die Home-Assistant-App Mitteilungen senden darf, "
+        "und unter iOS, ob kritische Hinweise erlaubt sind."
+    ),
+    "ai_title": "KI-Check",
+    "ai_result": "{verdict} ({confidence} % sicher). {reason}",
+    "ai_verdict_ok": "Sieht gut aus",
+    "ai_verdict_attention": "Einen Blick wert",
+    "ai_verdict_warning": "Bitte nachsehen",
+    "ai_verdict_critical": "Mögliche Gefahr",
+    "ai_off_none": "Kein KI-Check: Es ist keine KI-Aufgabe gewählt. Öffne die Optionen von CheckBaby, „KI-Bewertung“.",
+    "ai_off_consent": (
+        "Kein KI-Check: In den Optionen unter „KI-Bewertung“ ist nicht bestätigt, dass Bilder gesendet werden dürfen."
+    ),
+    "ai_off_privacy": "Kein KI-Check: Der Privatmodus ist an, deshalb verlässt kein Bild das Haus.",
+    "ai_off_camera": "Kein KI-Check: Der aktive Schlafplatz hat keine Kamera-Entität.",
+    "ai_off_busy": "Es läuft bereits ein KI-Check.",
+    "ai_failed": "Die KI hat keine brauchbare Antwort gegeben: {error}",
     "state_empty": "nicht im Bett",
     "state_asleep": "schläft",
     "state_restless": "unruhig",
@@ -157,3 +207,38 @@ def alert_title(language: str, child: str, level: AlertLevel) -> str:
     """The notification title."""
     key = "title_critical" if level is AlertLevel.CRITICAL else "title_warning"
     return text(language, key, child=child)
+
+
+def delivery_report(
+    language: str, *, sent: list[str], failed: list[str], local: list[str], local_down: list[str]
+) -> str:
+    """Where a test alert went, so that a silent phone is not a riddle."""
+    lines = []
+    if sent:
+        lines.append(text(language, "delivery_sent", names=", ".join(sent)))
+    if failed:
+        lines.append(text(language, "delivery_failed", names=", ".join(failed)))
+    if not sent and not failed:
+        lines.append(text(language, "delivery_none"))
+    reachable = [name for name in local if name not in local_down]
+    if reachable:
+        lines.append(text(language, "delivery_local", names=", ".join(reachable)))
+    if local_down:
+        lines.append(text(language, "delivery_local_down", names=", ".join(local_down)))
+    if not local:
+        lines.append(text(language, "delivery_no_local"))
+    if sent:
+        lines.append(text(language, "delivery_hint"))
+    return "\n".join(lines)
+
+
+def assessment_text(language: str, verdict: str, confidence: float, reason: str) -> str:
+    """What the AI said, in one sentence."""
+    key = f"ai_verdict_{verdict}"
+    return text(
+        language,
+        "ai_result",
+        verdict=text(language, key) if key in _EN else verdict,
+        confidence=round(confidence * 100),
+        reason=reason,
+    ).strip()

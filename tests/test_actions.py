@@ -10,7 +10,11 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_mqtt_message
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_mqtt_message,
+    async_mock_service,
+)
 from pytest_homeassistant_custom_component.typing import MqttMockHAClient
 
 from custom_components.checkbaby import coordinator as coordinator_module
@@ -28,7 +32,18 @@ from custom_components.checkbaby.const import (
 )
 from custom_components.checkbaby.diagnostics import async_get_config_entry_diagnostics
 
-from .conftest import CAMERA, PARENT_A, PARENT_B, advance, entity_id, make_entry, setup, state_of, turn_on
+from .conftest import (
+    CAMERA,
+    PARENT_A,
+    PARENT_B,
+    advance,
+    entity_id,
+    make_entry,
+    notices,
+    setup,
+    state_of,
+    turn_on,
+)
 from .test_monitoring import _real, _sound, _start
 
 Pushes = dict[str, list[ServiceCall]]
@@ -154,6 +169,22 @@ async def test_babysitter_gets_alerts_only_in_babysitter_mode(
     assert len(_real(pushes[PARENT_B])) == 1
 
 
+async def test_several_babysitters_are_told(
+    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory, pushes: Pushes
+) -> None:
+    granny = async_mock_service(hass, "notify", "mobile_app_granny")
+    entry = make_entry(
+        options={CONF_NOTIFY_SERVICES: [PARENT_A], CONF_BABYSITTER_SERVICE: [PARENT_B, "mobile_app_granny", PARENT_A]}
+    )
+    await _start(hass, entry, freezer)
+    select = entity_id(hass, entry, "select", "mode")
+    await hass.services.async_call("select", "select_option", {"entity_id": select, "option": "babysitter"}, blocking=True)
+    await _call(hass, "test_alert", {"level": "warning"})
+    await _sound(hass, freezer, 2)
+    # Everyone once, also the parent who is listed twice.
+    assert (len(_real(pushes[PARENT_A])), len(_real(pushes[PARENT_B])), len(_real(granny))) == (1, 1, 1)
+
+
 # -- buttons and actions ---------------------------------------------------
 
 
@@ -181,12 +212,17 @@ async def test_buttons(
     settings = config_entry.runtime_data.coordinator.settings
     assert settings.snooze_until > 0
 
+    # Every button shows what it did, on the phone and in Home Assistant's notifications.
     await press("quick_check")
     assert "Testkind: asleep." in _real(pushes[PARENT_A])[-1]["message"]
+    assert notices(hass)["quick_check"].startswith("Testkind: asleep.")
     await press("night_report")
     assert "Testkind" in _real(pushes[PARENT_B])[-1]["message"]
-    await press("assess_now")  # no AI configured: nothing happens
+    assert notices(hass)["night_report"].startswith("Testkind")
+    await press("assess_now")  # no AI configured: it says so
     assert state_of(hass, config_entry, "sensor", "ai_assessment") == "unknown"
+    assert notices(hass)["ai_check"].startswith("No AI check: no AI task is chosen.")
+    assert _real(pushes[PARENT_A])[-1]["data"]["tag"].endswith("_ai_check")
 
 
 async def test_actions_return_data(
@@ -374,6 +410,49 @@ async def test_privacy_mode_blocks_even_a_manual_ai_check(
     button = entity_id(hass, entry, "button", "assess_now")
     await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
     assert ai.calls == []  # no image leaves the house
+    assert "privacy mode is on" in notices(hass)["ai_check"]
+
+
+async def test_ai_check_button_shows_the_answer_or_why_there_is_none(hass: HomeAssistant, pushes: Pushes) -> None:
+    entry = make_entry(place=ENTITY_PLACE, options=AI_OPTIONS)
+    ai = FakeAI(hass)
+    await setup(hass, entry)
+    coordinator = entry.runtime_data.coordinator
+    button = entity_id(hass, entry, "button", "assess_now")
+
+    async def press() -> str:
+        await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+        return notices(hass)["ai_check"]
+
+    assert await press() == "Looks fine (90 % sure). Sleeping on the back."
+    assert _real(pushes[PARENT_A])[-1]["message"] == "Looks fine (90 % sure). Sleeping on the back."
+
+    ai.answers = {"ai_task.cloud": HomeAssistantError("quota exceeded"), "ai_task.local": {"nonsense": True}}
+    assert await press() == "The AI gave no usable answer: ai_task.local: unusable answer"
+
+    ai.answers = {"ai_task.cloud": "slow"}
+    running = hass.async_create_task(coordinator.async_assess("manual", manual=True))
+    await asyncio.sleep(0.05)
+    assert await press() == "An AI check is already running."
+    await running
+
+
+@pytest.mark.parametrize(
+    ("place", "options", "said"),
+    [
+        (ENTITY_PLACE, {**AI_OPTIONS, CONF_AI_CONSENT: False}, "sending pictures is not confirmed"),
+        ({CONF_CRY_ENTITY: "binary_sensor.cam_cry"}, AI_OPTIONS, "no camera entity"),
+    ],
+)
+async def test_ai_check_button_names_what_is_missing(
+    hass: HomeAssistant, pushes: Pushes, place: dict[str, Any], options: dict[str, Any], said: str
+) -> None:
+    entry = make_entry(place=place, options=options)
+    FakeAI(hass)
+    await setup(hass, entry)
+    button = entity_id(hass, entry, "button", "assess_now")
+    await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+    assert said in notices(hass)["ai_check"]
 
 
 async def test_no_ai_calls_without_consent(

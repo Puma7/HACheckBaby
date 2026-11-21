@@ -585,7 +585,9 @@ Hinweis zur Recherche: Der HA-Blogartikel von 2017 und der techdout-Artikel ware
 
 ## 11. Umsetzungsstand
 
-Stand 21.11.2026. „Getestet" heißt hier: durch automatische Tests abgedeckt, die gegen Home Assistant 2026.2 und 2026.10 laufen. **Nichts davon ist bisher an einer echten Kamera, einem echten Frigate, einem Handy oder einem Radarsensor gelaufen.** Die MQTT-Themen, das Format der Push-Nachrichten und der Aufruf der KI stammen aus Dokumentation und Recherche; ob sie an deinem System genau so stimmen, zeigt erst die Checkliste.
+Stand 21.11.2026. „Getestet" heißt hier: durch automatische Tests abgedeckt, die gegen Home Assistant 2026.2 und 2026.10 laufen. **Belegt ist bisher nichts davon an einer echten Kamera, einem echten Frigate, einem Handy oder einem Radarsensor.** Die MQTT-Themen, das Format der Push-Nachrichten und der Aufruf der KI stammen aus Dokumentation und Recherche; ob sie an deinem System genau so stimmen, zeigt erst die Checkliste.
+
+Ein erster Durchgang durch die Oberfläche auf einem echten Home Assistant hat stattgefunden (Abschnitt „Erster Praxistest"). Er hat Fehler in der Bedienung gezeigt, die behoben sind; dass ein Push auf einem echten Handy ankommt, ist damit noch nicht belegt.
 
 ### Umgesetzt und getestet
 
@@ -595,13 +597,13 @@ Stand 21.11.2026. „Getestet" heißt hier: durch automatische Tests abgedeckt, 
 | Quellen | Frigate über MQTT (Weinen, Schrei, Pegel, Bewegung, Person, Katze/Hund in der Bett-Zone, Verfügbarkeit); alternativ Entitäten für Weinen, Bewegung und Pegel; Präsenz, Türkontakt, Raumklima, Rauch/CO, Internet |
 | Zustand | Leer, schläft, unruhig, wach, weint, betreut, unbekannt; Übergänge nach Dauer, nicht nach Einzelereignis |
 | Alarme | Hinweis, Warnung, kritisch; Wiederholung, Eskalation an alle, lokaler Alarmkanal, Quittieren, Schlummern, Sperrzeit; alle Regeln der Eskalationsmatrix aus 5.4 |
-| Benachrichtigung | Push mit Bild und Knöpfen für iOS und Android in einer Nachricht, kritische Alarme mit Durchbruch durch „Nicht stören"; „Wer hat Dienst"; Babysitter-Modus |
-| Ausfallüberwachung | Jede Quelle einzeln, flaches Mikrofon, fehlendes Benachrichtigungsziel; Meldung nach Unterbrechung und beim Herunterfahren; Herzschlag-Tasten für einen Dead-Man-Summer |
+| Benachrichtigung | Push mit Bild und Knöpfen für iOS und Android in einer Nachricht, kritische Alarme mit Durchbruch durch „Nicht stören"; „Wer hat Dienst"; Babysitter-Modus mit mehreren Handys; jeder Alarm steht zusätzlich in den Benachrichtigungen von Home Assistant; der Testalarm schreibt dort einen Zustellbericht |
+| Ausfallüberwachung | Jede Quelle einzeln, flaches Mikrofon, fehlendes Benachrichtigungsziel, nicht erreichbarer lokaler Alarm; Meldung nach Unterbrechung und beim Herunterfahren; Lebenszeichen für einen Ausfall-Summer (Dead-Man-Summer); während Home Assistant noch startet, gilt Fehlendes noch nicht als Störung |
 | Geräusch-Grundlinie | Lernt den Raumpegel, auch ein dauerhaft laufendes weißes Rauschen |
 | KI-Bewertung | Aufruf über `ai_task` mit Kamerabild und festem Antwortschema; Ausweichkette, Zeitlimit, Stundenbudget, Einwilligung; alle Leitplanken aus 5.5 |
 | Atembewegungs-Hinweis | Regel mit Radar-Entität und Vital-Engine als Quellen, Fusion, Schattenmodus, Untergrenze 20 s |
 | Komfort | Ton-Weiterleitung auf einen Lautsprecher (VOX), Schlafsack-Empfehlung, Ruhezeit-Sensor für eigene Automationen, Privatmodus, mehrere Schlafplätze |
-| Auswertung | Schlafprotokoll, Aufwachen, Weinzeit, Schnell-Check und Nachtbericht als Knopf und als Aktion mit Rückgabewerten |
+| Auswertung | Schlafprotokoll, Aufwachen, Weinzeit, Schnell-Check und Nachtbericht als Knopf und als Aktion mit Rückgabewerten; die Knöpfe „Schnell-Check", „Nachtbericht senden" und „KI-Check jetzt" zeigen ihr Ergebnis in den Benachrichtigungen von Home Assistant und auf dem Handy im Dienst |
 | Betrieb | Einstellungen, Alarme und Schlafprotokoll überstehen Neustarts; Diagnose-Download ohne Daten des Kindes; Ereignisprotokoll jeder Entscheidung |
 
 ### Im Labor geprüft
@@ -616,6 +618,20 @@ Das Labor (`lab/`, Beschreibung in `lab/README.md`) startet ein echtes Home Assi
 - Einstellungen und Schlafprotokoll überstehen einen echten Neustart.
 
 Weiter offen bleibt, was nur echte Geräte zeigen können: ob Frigate genau diese Nachrichten sendet, ob ein Push auf einem Handy ankommt und ertönt, wie gut ein echtes KI-Modell urteilt und ob Radar und Engine bei einem Kind tragen.
+
+### Erster Praxistest
+
+Am 21.11.2026 wurde Version 0.0.2 auf einem echten Home Assistant eingerichtet und durchgeklickt. Befunde und was daraus wurde:
+
+| Befund | Ursache | Behoben durch |
+|---|---|---|
+| Ein Handy allein wurde als Ziel abgelehnt; der Testalarm kam auf keinem Handy an | Das Auswahlfeld hatte eine Sucheingabe für eigene Einträge; was dort getippt, aber nicht ausdrücklich übernommen wird, geht verloren. In der Oberfläche des Labors nachgestellt: Auswählen aus der Liste speichert, Tippen nicht. Welcher Weg es am echten System war, ist nicht belegt. | Ankreuzfelder mit Gerätenamen, nichts mehr zu tippen; eigener Hinweis, wenn ein Handy nur unter „Babysitter" steht |
+| Der lokale Alarm (eine Lampe) blieb dunkel | Die Lampe war in Home Assistant nicht erreichbar; das stand nur im Protokoll | Neue Störung „lokaler Alarm nicht erreichbar"; der Testalarm nennt nicht erreichbare Geräte |
+| Nach „Testalarm", „Schnell-Check", „Nachtbericht senden", „KI-Check jetzt" war nichts zu sehen | Die Ergebnisse gingen nur als Push an die Handys, und es war keines gespeichert | Ergebnis und Zustellbericht in den Benachrichtigungen von Home Assistant |
+| „Herzschlag-Tasten für den Dead-Man-Summer" und „KI-Aufgabe" waren unverständlich | Fachbegriffe ohne Erklärung | Neue Namen und Erklärungen im Dialog und in der Dokumentation |
+| Wunsch: mehrere Babysitter-Handys | Das Feld nahm eines | Mehrfachauswahl |
+
+Beim Nachstellen im Labor zusätzlich gefunden: Direkt nach einem Neustart von Home Assistant galten Handys und Geräte anderer Integrationen als fehlend, solange diese noch luden, und lösten bei eingeschalteter Überwachung eine Störungswarnung aus. Jetzt wird Fehlendes erst gewertet, wenn Home Assistant fertig gestartet ist.
 
 ### Geschrieben, aber nur eingeschränkt prüfbar
 
@@ -656,6 +672,7 @@ Weiter offen bleibt, was nur echte Geräte zeigen können: ob Frigate genau dies
 
 ### Was als Nächstes zählt
 
-1. Checkliste am echten System durchgehen. Sie entscheidet, ob MQTT-Themen, Push-Format und KI-Aufruf stimmen.
-2. Zwei Wochen Parallelbetrieb neben einem gekauften Babyphone, mit ausgeschaltetem Atembewegungs-Alarm.
-3. Erst danach Schwellen anpassen und über den Atembewegungs-Alarm entscheiden.
+1. Version 0.0.3 einspielen, ein Handy ankreuzen und „Testalarm" drücken: Der Zustellbericht in den Benachrichtigungen von Home Assistant zeigt, ob der Push angenommen wurde; ob er auf dem Handy ertönt, zeigt das Handy.
+2. Checkliste am echten System durchgehen. Sie entscheidet, ob MQTT-Themen, Push-Format und KI-Aufruf stimmen.
+3. Zwei Wochen Parallelbetrieb neben einem gekauften Babyphone, mit ausgeschaltetem Atembewegungs-Alarm.
+4. Erst danach Schwellen anpassen und über den Atembewegungs-Alarm entscheiden.

@@ -48,7 +48,7 @@ PLACE = {
 OPTIONS = {
     "notify_services": [PARENT_A, PARENT_B],
     "local_alarm_entities": ["switch.lab_siren"],
-    "babysitter_service": "mobile_app_lab_babysitter",
+    "babysitter_service": ["mobile_app_lab_babysitter"],
     "heartbeat_buttons": ["button.lab_dead_man_heartbeat"],
     "smoke_entities": ["binary_sensor.lab_smoke"],
     "internet_entity": "binary_sensor.lab_internet",
@@ -145,6 +145,19 @@ class Run:
         state = self.hass.states.get(self.entity(platform, key))
         return state.state if state else "missing"
 
+    def notices(self) -> dict[str, str]:
+        """The child's entries in Home Assistant's own notifications, by topic."""
+        from homeassistant.components.persistent_notification import (  # noqa: PLC0415
+            _async_get_or_create_notifications,
+        )
+
+        prefix = f"checkbaby_{self.entry_id}_"
+        return {
+            key.removeprefix(prefix): note["message"]
+            for key, note in _async_get_or_create_notifications(self.hass).items()
+            if key.startswith(prefix)
+        }
+
     def pushes(self, phone: str | None = None) -> list[dict[str, Any]]:
         return list(self.world.real_pushes(phone))
 
@@ -238,6 +251,13 @@ async def setup_through_the_frontend_api(run: Run) -> None:
         {"camera_entity", "door_entity", "breath_rate_entity"} <= set(fields["place"]),
         len(fields["place"]),
     )
+    phones = next(field for field in results[2]["data_schema"] if field["name"] == "notify_services")["selector"]["select"]
+    offered = {option["value"]: option["label"] for option in phones["options"]}
+    run.check(
+        "phones are offered as tick boxes with readable names",
+        phones.get("mode") == "list" and phones["multiple"] and offered.get(PARENT_A) == "Lab Parent A" and len(offered) == 3,
+        offered,
+    )
     created = results[-1]
     run.check("setup creates the entry", created["type"] == "create_entry", created.get("title"))
     run.entry_id = created["result"]["entry_id"]
@@ -251,6 +271,12 @@ async def setup_through_the_frontend_api(run: Run) -> None:
     stored = dict(run.hass.config_entries.async_get_entry(run.entry_id).options)
     run.check("the three options pages save and keep each other's settings", all(saved) and stored == OPTIONS,
               sorted(set(OPTIONS) - set(stored)))
+
+    results = await api.flow(
+        "options", run.entry_id, [{"next_step_id": "notify"}, {"notify_services": [], "babysitter_service": [PARENT_B]}]
+    )
+    run.check("a phone ticked only under babysitters is refused with its own message",
+              results[-1].get("errors") == {"base": "only_babysitter"}, results[-1].get("errors"))
 
     results = await api.flow(
         "subentry", [run.entry_id, "sleep_place"], [{"name": "Pram", "cry_entity": "binary_sensor.lab_door"}]
@@ -493,6 +519,28 @@ async def reports_and_diagnostics(run: Run) -> None:
     check = await api.call("checkbaby", "quick_check", {"notify": True}, response=True)
     run.check("quick check answers with a sentence", CHILD in check["summary"] and check["state"] in ("asleep", "awake", "restless"), check["summary"])
     await run.until("and sends it to the phone on duty", lambda: any(p["message"] == check["summary"] for p in run.pushes(PARENT_A)), 5)
+    await run.until("and shows it in Home Assistant's notifications", lambda: run.notices().get("quick_check") == check["summary"], 5)
+    await api.call("button", "press", {"entity_id": run.entity("button", "assess_now")})
+    await run.until("the button 'AI check now' shows the AI's answer", lambda: "% sure" in run.notices().get("ai_check", ""), 15)
+
+    await api.call("checkbaby", "test_alert", {"level": "warning"})
+    await run.until("a test alert writes a delivery report", lambda: "test_delivery" in run.notices(), 6)
+    delivery = run.notices().get("test_delivery", "")
+    run.check("the report names both phones and the siren",
+              all(name in delivery for name in (PARENT_A, PARENT_B, "switch.lab_siren")), delivery.replace("\n", " | "))
+    await run.tap("seen")
+    await run.until("after Seen the alert is gone from the notifications, the report stays",
+                    lambda: "test" not in run.notices() and "test_delivery" in run.notices(), 6)
+
+    await run.quiet_down()
+    # What an unplugged siren looks like to the integration.
+    run.hass.states.async_set("switch.lab_siren", "unavailable")
+    await run.until("an unreachable local alarm is listed as a problem", lambda: "local_alarm" in run.coordinator.monitor.problems, 8)
+    await run.stays("but wakes nobody while the phones work", lambda: run.pushes() == [] and run.state("sensor", "state") != "unknown", 8)
+    run.hass.states.async_set("switch.lab_siren", "off")
+    await run.until("and the problem ends when it is back", lambda: "local_alarm" not in run.coordinator.monitor.problems, 8)
+    await run.quiet_down()
+
     report = await api.call("checkbaby", "night_report", {}, response=True)
     run.check("night report has numbers", report["slept_seconds"] > 0 and report["wakeups"] >= 1, report["summary"])
     run.check("heartbeat button was pressed regularly", run.world.heartbeats >= 5, run.world.heartbeats)
@@ -528,6 +576,8 @@ async def restart(run: Run) -> None:
               and run.coordinator.settings.noise_margin_db == 12.0)
     run.check("the sleep log survived", len(run.coordinator.monitor.sleep_log.sessions) >= sessions, sessions)
     await run.until("monitoring is healthy again without help", lambda: run.coordinator.monitor.problems in ([], ["engine"]), 40)
+    false_alarms = [p["message"][:60] for p in run.pushes() if "impaired" in p["message"] or "down for" in p["message"]]
+    run.check("the restart raises no false monitoring warning", false_alarms == [], false_alarms)
     if run.long:
         await run.until("the outage is reported after the restart", lambda: any("interrupted" in p["message"] for p in run.pushes()), 10)
     else:

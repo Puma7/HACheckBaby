@@ -49,25 +49,25 @@
       },
       "notify": {
         "title": "Wer benachrichtigt wird",
-        "description": "Wähle die Handys, die Alarme bekommen, und falls vorhanden einen lokalen Alarm, der ohne Internet funktioniert. Mindestens eines von beiden ist nötig.",
+        "description": "Kreuze die Handys an, die Alarme bekommen, und wähle falls vorhanden einen lokalen Alarm, der ohne Internet funktioniert. Mindestens eines von beiden ist nötig.\n\nDrücke danach auf der Geräteseite „Testalarm“: Home Assistant zeigt dann in seinen Benachrichtigungen, wohin der Alarm gegangen ist.",
         "data": {
           "notify_services": "Handys",
           "local_alarm_entities": "Lokaler Alarm (Sirene, Licht, Schalter)"
         },
         "data_description": {
-          "notify_services": "Benachrichtigungsdienste der Home-Assistant-App. Kritische Alarme gehen an alle.",
-          "local_alarm_entities": "Wird eingeschaltet, wenn ein Alarm eine Minute unbeantwortet bleibt, oder sofort, wenn das Internet ausgefallen ist. Gehört ins Elternschlafzimmer, nie ins Kinderzimmer."
+          "notify_services": "Jedes Handy mit der Home-Assistant-App steht hier mit seinem Namen. Fehlt ein Handy? Öffne auf ihm die Home-Assistant-App und melde dich an; danach erscheint es hier. Andere Benachrichtigungsdienste, zum Beispiel eine Gruppe, stehen als notify.… in der Liste. Kritische Alarme gehen an alle, die hier angekreuzt sind.",
+          "local_alarm_entities": "Wird eingeschaltet, wenn ein Alarm eine Minute unbeantwortet bleibt, oder sofort, wenn das Internet ausgefallen ist. Gehört ins Elternschlafzimmer, nie ins Kinderzimmer. Das Gerät muss in Home Assistant erreichbar sein: Eine Lampe, die am Wandschalter aus ist, bleibt dunkel."
         }
       },
       "ai": {
         "title": "KI-Bewertung (optional)",
         "description": "Ein KI-Modell kann ein Kamerabild ansehen und sagen, ob das Kind auf dem Rücken liegt, ob das Gesicht frei ist und ob lose Dinge im Bett liegen. Lass die Seite leer, um das zu überspringen; alles andere funktioniert auch ohne.\n\nDas Modell selbst wird einmal in Home Assistant hinzugefügt, nicht hier: Einstellungen > Geräte & Dienste > Integration hinzufügen > Google Gemini oder OpenRouter (dort trägst du den API-Schlüssel ein). Danach erscheint die KI-Aufgabe in der Liste unten. Ein lokales Modell über Ollama funktioniert genauso.",
         "data": {
-          "ai_task_entities": "KI-Aufgabe",
+          "ai_task_entities": "KI-Modell (eine „KI-Aufgabe“ von Home Assistant)",
           "ai_consent": "Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden"
         },
         "data_description": {
-          "ai_task_entities": "Wählst du mehrere, werden sie in dieser Reihenfolge gefragt, und die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
+          "ai_task_entities": "Eine „KI-Aufgabe“ ist der Anschluss von Home Assistant an ein KI-Modell. Sie erscheint in dieser Liste, sobald du unter Einstellungen > Geräte & Dienste eine KI-Integration hinzugefügt hast, zum Beispiel Google Gemini, OpenRouter oder Ollama; sie heißt meist wie der Anbieter. Eine leere Liste bedeutet, dass noch keine solche Integration eingerichtet ist. Wählst du mehrere, werden sie in dieser Reihenfolge gefragt, und die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
           "ai_consent": "Nötig, um die KI-Bewertung zu nutzen. Prüfe in den Bedingungen deines Anbieters, wie Bilder verwendet werden. Ist das gesetzt, läuft die Bewertung von selbst, solange die Überwachung an ist; der Schalter „KI-Bewertung“ pausiert sie."
         }
       },
@@ -82,7 +82,8 @@
     "error": {
       "name_required": "Bitte einen Namen eingeben.",
       "no_sound_source": "Bitte eine Frigate-Kamera eintragen oder einen Wein-Sensor wählen: Ohne Tonquelle kann die Überwachung das Kind nicht hören.",
-      "no_alert_target": "Bitte mindestens ein Handy oder einen lokalen Alarm wählen; sonst könnte kein Alarm jemanden erreichen.",
+      "no_alert_target": "Bitte mindestens ein Handy ankreuzen oder einen lokalen Alarm wählen; sonst könnte kein Alarm jemanden erreichen.",
+      "only_babysitter": "Das Handy ist nur unter „Handys der Babysitter“ angekreuzt und bekäme Alarme nur im Modus „Babysitter“. Kreuze mindestens eines unter „Handys“ an oder wähle einen lokalen Alarm.",
       "ai_consent_required": "Bitte bestätigen, dass Bilder gesendet werden dürfen, oder die KI-Aufgaben entfernen.",
       "must_acknowledge": "Bitte den Hinweis bestätigen, um fortzufahren."
     },
@@ -106,30 +107,30 @@
       },
       "notify": {
         "title": "Wer benachrichtigt wird",
-        "description": "Wähle die Handys, die Alarme bekommen, und falls vorhanden einen lokalen Alarm, der ohne Internet funktioniert. Mindestens eines von beiden ist nötig.",
+        "description": "Kreuze die Handys an, die Alarme bekommen, und wähle falls vorhanden einen lokalen Alarm, der ohne Internet funktioniert. Mindestens eines von beiden ist nötig.\n\nDrücke danach auf der Geräteseite „Testalarm“: Home Assistant zeigt dann in seinen Benachrichtigungen, wohin der Alarm gegangen ist.",
         "data": {
           "notify_services": "Handys",
           "local_alarm_entities": "Lokaler Alarm (Sirene, Licht, Schalter)",
-          "babysitter_service": "Handy des Babysitters",
-          "heartbeat_buttons": "Herzschlag-Tasten für den Dead-Man-Summer"
+          "babysitter_service": "Handys der Babysitter",
+          "heartbeat_buttons": "Lebenszeichen für einen Ausfall-Summer (optional)"
         },
         "data_description": {
-          "notify_services": "Benachrichtigungsdienste der Home-Assistant-App. Kritische Alarme gehen an alle.",
-          "local_alarm_entities": "Wird eingeschaltet, wenn ein Alarm eine Minute unbeantwortet bleibt, oder sofort, wenn das Internet ausgefallen ist. Gehört ins Elternschlafzimmer, nie ins Kinderzimmer.",
-          "babysitter_service": "Bekommt Alarme nur im Modus „Babysitter“.",
-          "heartbeat_buttons": "Werden alle 30 Sekunden gedrückt, solange die Überwachung scharf und störungsfrei ist. So kann ein eigenes Gerät Alarm geben, wenn Home Assistant ausfällt."
+          "notify_services": "Jedes Handy mit der Home-Assistant-App steht hier mit seinem Namen. Fehlt ein Handy? Öffne auf ihm die Home-Assistant-App und melde dich an; danach erscheint es hier. Andere Benachrichtigungsdienste, zum Beispiel eine Gruppe, stehen als notify.… in der Liste. Kritische Alarme gehen an alle, die hier angekreuzt sind.",
+          "local_alarm_entities": "Wird eingeschaltet, wenn ein Alarm eine Minute unbeantwortet bleibt, oder sofort, wenn das Internet ausgefallen ist. Gehört ins Elternschlafzimmer, nie ins Kinderzimmer. Das Gerät muss in Home Assistant erreichbar sein: Eine Lampe, die am Wandschalter aus ist, bleibt dunkel.",
+          "babysitter_service": "Zum Beispiel Großeltern oder ein Babysitter. Sie bekommen Alarme nur, solange der Modus auf „Babysitter“ steht, zusätzlich zu den Handys oben.",
+          "heartbeat_buttons": "Lass das leer, wenn du keinen Ausfall-Summer („Dead-Man-Summer“) gebaut hast: ein kleines eigenes Gerät, das piept, sobald Home Assistant verstummt, zum Beispiel nach einem Absturz oder wenn Strom oder WLAN ausfallen. CheckBaby drückt die hier gewählte Taste alle 30 Sekunden als Lebenszeichen, solange die Überwachung an ist und funktioniert; bleibt das Drücken aus, schlägt der Summer Alarm. Ein Baubeispiel steht in der Dokumentation."
         }
       },
       "ai": {
         "title": "KI-Bewertung (optional)",
         "description": "Ein KI-Modell kann ein Kamerabild ansehen und sagen, ob das Kind auf dem Rücken liegt, ob das Gesicht frei ist und ob lose Dinge im Bett liegen. Lass die Seite leer, um das zu überspringen; alles andere funktioniert auch ohne.\n\nDas Modell selbst wird einmal in Home Assistant hinzugefügt, nicht hier: Einstellungen > Geräte & Dienste > Integration hinzufügen > Google Gemini oder OpenRouter (dort trägst du den API-Schlüssel ein). Danach erscheint die KI-Aufgabe in der Liste unten. Ein lokales Modell über Ollama funktioniert genauso.",
         "data": {
-          "ai_task_entities": "KI-Aufgabe",
+          "ai_task_entities": "KI-Modell (eine „KI-Aufgabe“ von Home Assistant)",
           "ai_consent": "Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden",
           "ai_calls_per_hour": "KI-Aufrufe pro Stunde höchstens"
         },
         "data_description": {
-          "ai_task_entities": "Wählst du mehrere, werden sie in dieser Reihenfolge gefragt, und die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
+          "ai_task_entities": "Eine „KI-Aufgabe“ ist der Anschluss von Home Assistant an ein KI-Modell. Sie erscheint in dieser Liste, sobald du unter Einstellungen > Geräte & Dienste eine KI-Integration hinzugefügt hast, zum Beispiel Google Gemini, OpenRouter oder Ollama; sie heißt meist wie der Anbieter. Eine leere Liste bedeutet, dass noch keine solche Integration eingerichtet ist. Wählst du mehrere, werden sie in dieser Reihenfolge gefragt, und die erste, die antwortet, wird verwendet. Ein Cloud-Modell erhält Kamerabilder des Kindes; ein lokales Modell behält sie im Haus.",
           "ai_consent": "Nötig, um die KI-Bewertung zu nutzen. Prüfe in den Bedingungen deines Anbieters, wie Bilder verwendet werden. Ist das gesetzt, läuft die Bewertung von selbst, solange die Überwachung an ist; der Schalter „KI-Bewertung“ pausiert sie."
         }
       },
@@ -150,7 +151,8 @@
       }
     },
     "error": {
-      "no_alert_target": "Bitte mindestens ein Handy oder einen lokalen Alarm wählen; sonst könnte kein Alarm jemanden erreichen.",
+      "no_alert_target": "Bitte mindestens ein Handy ankreuzen oder einen lokalen Alarm wählen; sonst könnte kein Alarm jemanden erreichen.",
+      "only_babysitter": "Das Handy ist nur unter „Handys der Babysitter“ angekreuzt und bekäme Alarme nur im Modus „Babysitter“. Kreuze mindestens eines unter „Handys“ an oder wähle einen lokalen Alarm.",
       "ai_consent_required": "Bitte bestätigen, dass Bilder gesendet werden dürfen, oder die KI-Aufgaben entfernen."
     }
   },

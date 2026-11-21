@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import CoreState, HomeAssistant, ServiceCall
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 import pytest
@@ -45,7 +45,19 @@ from custom_components.checkbaby.const import (
     DOMAIN,
 )
 
-from .conftest import CAMERA, PARENT_A, PARENT_B, SIREN, advance, entity_id, make_entry, setup, state_of, turn_on
+from .conftest import (
+    CAMERA,
+    PARENT_A,
+    PARENT_B,
+    SIREN,
+    advance,
+    entity_id,
+    make_entry,
+    notices,
+    setup,
+    state_of,
+    turn_on,
+)
 
 BASE = f"frigate/{CAMERA}"
 Pushes = dict[str, list[ServiceCall]]
@@ -103,6 +115,8 @@ async def test_crying_from_warning_to_acknowledgement(
     event = hass.states.get(entity_id(hass, config_entry, "event", "alert"))
     assert event is not None
     assert (event.attributes["event_type"], event.attributes["level"]) == ("crying", "warning")
+    # The alert also shows in Home Assistant itself, for whoever has no phone at hand.
+    assert notices(hass) == {"crying": "Testkind is crying (16 s)."}
 
     # Nobody reacts: the local alarm joins after a minute, critical after three.
     await _sound(hass, freezer, 60)
@@ -122,6 +136,7 @@ async def test_crying_from_warning_to_acknowledgement(
 
     assert len(_real(pushes[PARENT_A])) == before  # no more repeats
     assert pushes[PARENT_A][-1].data["message"] == "clear_notification"
+    assert notices(hass) == {}
     assert [call.data["entity_id"] for call in local_alarm["off"]] == [[SIREN]]
     assert state_of(hass, config_entry, "binary_sensor", "alert_active") == "off"
     assert state_of(hass, config_entry, "sensor", "alert_level") == "critical"  # still crying
@@ -389,6 +404,18 @@ async def test_audio_relay_heartbeat_and_stop_message(
     hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
     await hass.async_block_till_done()
     assert "stopping" in _real(pushes[PARENT_A])[-1]["message"]
+
+
+async def test_heartbeat_continues_when_only_the_picture_is_lost(
+    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory, pushes: Pushes
+) -> None:
+    entry = make_entry(options={CONF_NOTIFY_SERVICES: [PARENT_A], CONF_HEARTBEAT_BUTTONS: ["button.deadman"]})
+    await _start(hass, entry, freezer)
+    presses = async_mock_service(hass, "button", "press")
+    hass.states.async_set("camera.nursery", "unavailable")
+    await _sound(hass, freezer, 70)
+    assert entry.runtime_data.coordinator.monitor.problems == ["camera"]
+    assert len(presses) >= 2
 
 
 async def test_no_heartbeat_while_there_is_a_problem(
@@ -688,6 +715,7 @@ async def test_lost_camera_picture_is_shown_but_wakes_nobody(
     await _sound(hass, freezer, 400)
 
     assert config_entry.runtime_data.coordinator.monitor.problems == ["camera"]
+    assert config_entry.runtime_data.coordinator.monitor.serious_problems() == []
     assert state_of(hass, config_entry, "binary_sensor", "monitoring_problem") == "on"
     assert state_of(hass, config_entry, "sensor", "alert_level") == "info"
     assert state_of(hass, config_entry, "sensor", "state") == "asleep"
@@ -772,3 +800,101 @@ async def test_failing_helpers_do_not_stop_the_alert_chain(
 
     assert len(_real(delivered)) == 1
     assert state_of(hass, entry, "sensor", "alert_reason") == "crying"
+
+
+async def test_unreachable_local_alarm_is_shown_but_wakes_nobody(
+    hass: HomeAssistant,
+    mqtt_mock: MqttMockHAClient,
+    config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    pushes: Pushes,
+) -> None:
+    await _start(hass, config_entry, freezer)
+    # A lamp that is switched off at the wall: Home Assistant cannot reach it.
+    hass.states.async_set(SIREN, "unavailable")
+    await _sound(hass, freezer, 20)
+
+    monitor = config_entry.runtime_data.coordinator.monitor
+    assert monitor.problems == ["local_alarm"]
+    assert monitor.serious_problems() == []  # the phones still work
+    assert state_of(hass, config_entry, "sensor", "state") == "asleep"
+    assert _real(pushes[PARENT_A]) == []
+
+    hass.states.async_set(SIREN, "off")
+    await _sound(hass, freezer, 4)
+    assert monitor.problems == []
+
+
+async def test_local_alarm_as_the_only_target_must_be_reachable(
+    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory
+) -> None:
+    entry = make_entry(options={CONF_LOCAL_ALARM: [SIREN, "light.gone"]})
+    await _start(hass, entry, freezer)
+    monitor = entry.runtime_data.coordinator.monitor
+    # One of the two works: alerts can still reach someone.
+    assert monitor.serious_problems() == []
+    assert monitor.problems == ["local_alarm"]
+
+    hass.states.async_remove(SIREN)
+    await _sound(hass, freezer, 4)
+    assert monitor.serious_problems() == ["notify"]
+
+
+async def test_test_alert_says_where_it_went(
+    hass: HomeAssistant,
+    mqtt_mock: MqttMockHAClient,
+    config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    local_alarm: Pushes,
+) -> None:
+    delivered = async_mock_service(hass, "notify", PARENT_B)  # the other phone is gone
+    await _start(hass, config_entry, freezer)
+    hass.states.async_set(SIREN, "unavailable")
+    coordinator = config_entry.runtime_data.coordinator
+
+    coordinator.test_alert()
+    await _sound(hass, freezer, 2)
+
+    assert [push["message"] for push in _real(delivered)][-1] == "Test alert. Tap “Seen” to end it."
+    shown = notices(hass)
+    assert shown["test"] == "Test alert. Tap “Seen” to end it."
+    report = shown["test_delivery"]
+    assert "Sent to: notify.mobile_app_parent_b." in report
+    assert "Could NOT be sent to: notify.mobile_app_parent_a." in report
+    assert "Local alarm NOT reachable: siren.bedroom." in report
+
+    # Answering the test ends the alert; the report stays to be read.
+    coordinator.acknowledge()
+    await _sound(hass, freezer, 2)
+    assert "test" not in notices(hass)
+    assert "test_delivery" in notices(hass)
+
+
+async def test_test_alert_without_a_phone_says_so(
+    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory, local_alarm: Pushes
+) -> None:
+    entry = make_entry(options={CONF_LOCAL_ALARM: [SIREN]})
+    await _start(hass, entry, freezer)
+    entry.runtime_data.coordinator.test_alert()
+    await _sound(hass, freezer, 2)
+    report = notices(hass)["test_delivery"]
+    assert "No phone is chosen" in report
+    assert "Local alarm: siren.bedroom." in report
+
+
+async def test_while_home_assistant_starts_missing_things_are_not_problems_yet(
+    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory, pushes: Pushes
+) -> None:
+    # After a restart at night the phones and lamps of other integrations load a little later.
+    hass.set_state(CoreState.starting)
+    entry = make_entry(options={CONF_NOTIFY_SERVICES: [PARENT_A, "mobile_app_late"], CONF_LOCAL_ALARM: ["light.late"]})
+    await _start(hass, entry, freezer)
+    await _sound(hass, freezer, 10)
+    monitor = entry.runtime_data.coordinator.monitor
+    assert monitor.problems == []
+    assert _real(pushes[PARENT_A]) == []
+
+    # Once Home Assistant runs, what is still missing is missing.
+    hass.set_state(CoreState.running)
+    await _sound(hass, freezer, 4)
+    assert monitor.problems == ["local_alarm", "notify"]

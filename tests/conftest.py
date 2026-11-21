@@ -86,9 +86,21 @@ def local_alarm(hass: HomeAssistant) -> dict[str, list[ServiceCall]]:
     }
 
 
+def notices(hass: HomeAssistant) -> dict[str, str]:
+    """Home Assistant's own notifications: the part of the id after the entry, and the message."""
+    from homeassistant.components.persistent_notification import _async_get_or_create_notifications  # noqa: PLC0415
+
+    return {
+        key.split("_", 2)[2]: note["message"]
+        for key, note in _async_get_or_create_notifications(hass).items()
+        if key.startswith("checkbaby_")
+    }
+
+
 async def setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
-    """Add and set up an entry; the camera entity it refers to exists."""
+    """Add and set up an entry; the camera and the siren it refers to exist."""
     hass.states.async_set("camera.nursery", "idle")
+    hass.states.async_set(SIREN, "off")
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()

@@ -68,6 +68,7 @@ SOURCE_VITAL_SENSOR: Final = "vital_sensor"
 SOURCE_NOTIFY: Final = "notify"
 SOURCE_PLACE: Final = "sleep_place"
 SOURCE_CRY_SENSOR: Final = "cry_sensor"
+SOURCE_LOCAL_ALARM: Final = "local_alarm"
 
 VITAL_VIDEO: Final = "video"
 VITAL_RADAR: Final = "radar"

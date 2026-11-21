@@ -221,6 +221,11 @@ class Monitor:
             minor -= VITAL_SOURCES
         return frozenset(minor)
 
+    def serious_problems(self) -> list[str]:
+        """Problems that mean the monitor cannot be relied on right now."""
+        minor = self._minor_problems()
+        return [name for name in self.problems if name not in minor]
+
     def _enter(self, new_state: ChildState, now: float) -> None:
         previous = self.state
         self.sleep_log.on_state(

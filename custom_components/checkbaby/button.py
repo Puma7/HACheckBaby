@@ -13,7 +13,6 @@ from .const import SNOOZE_SECONDS
 from .coordinator import CheckBabyCoordinator
 from .entity import CheckBabyEntity
 from .models import CheckBabyConfigEntry
-from .types import AlertLevel
 
 
 async def _acknowledge(coordinator: CheckBabyCoordinator) -> None:
@@ -29,15 +28,15 @@ async def _test_alert(coordinator: CheckBabyCoordinator) -> None:
 
 
 async def _assess(coordinator: CheckBabyCoordinator) -> None:
-    await coordinator.async_assess("manual", manual=True)
+    await coordinator.async_assess_and_tell()
 
 
 async def _quick_check(coordinator: CheckBabyCoordinator) -> None:
-    await coordinator.notifier.async_send_text(coordinator.quick_check()["summary"], level=AlertLevel.INFO)
+    await coordinator.notifier.async_send_text(coordinator.quick_check()["summary"], topic="quick_check")
 
 
 async def _night_report(coordinator: CheckBabyCoordinator) -> None:
-    await coordinator.notifier.async_send_text(coordinator.night_report()["summary"], level=AlertLevel.INFO)
+    await coordinator.notifier.async_send_text(coordinator.night_report()["summary"], topic="night_report")
 
 
 BUTTONS: tuple[tuple[str, Callable[[CheckBabyCoordinator], Awaitable[None]], EntityCategory | None], ...] = (

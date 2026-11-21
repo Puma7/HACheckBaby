@@ -49,25 +49,25 @@
       },
       "notify": {
         "title": "Who is told",
-        "description": "Choose the phones that receive alerts and, if you have one, a local alarm that works without internet. At least one of the two is required.",
+        "description": "Tick the phones that receive alerts and, if you have one, choose a local alarm that works without internet. At least one of the two is required.\n\nAfterwards, press \"Test alert\" on the device page: Home Assistant then shows in its notifications where the alert went.",
         "data": {
           "notify_services": "Phones",
           "local_alarm_entities": "Local alarm (siren, light, switch)"
         },
         "data_description": {
-          "notify_services": "Notify services of the Home Assistant companion app. Critical alerts go to all of them.",
-          "local_alarm_entities": "Switched on when an alert stays unanswered for a minute, or at once if the internet is down. Put it where you sleep, never in the child's room."
+          "notify_services": "Every phone with the Home Assistant app is listed by its name. A phone is missing? Open the Home Assistant app on it and sign in; it then appears here. Other notify services, for example a group, are listed as notify.… Critical alerts go to everyone ticked here.",
+          "local_alarm_entities": "Switched on when an alert stays unanswered for a minute, or at once if the internet is down. Put it where you sleep, never in the child's room. The device has to be reachable in Home Assistant: a lamp that is off at the wall switch stays dark."
         }
       },
       "ai": {
         "title": "AI assessment (optional)",
         "description": "An AI model can look at a camera picture and say whether the child lies on its back, whether the face is free and whether loose things are in the bed. Leave this page empty to skip it; everything else works without it.\n\nThe model itself is added once in Home Assistant, not here: Settings > Devices & services > Add integration > Google Gemini or OpenRouter (you enter the API key there). After that the AI task appears in the list below. A local model through Ollama works the same way.",
         "data": {
-          "ai_task_entities": "AI task",
+          "ai_task_entities": "AI model (an \"AI task\" of Home Assistant)",
           "ai_consent": "Images of the child may be sent to these AI tasks"
         },
         "data_description": {
-          "ai_task_entities": "If you choose several, they are asked in this order and the first one that answers is used. A cloud model receives camera pictures of the child; a local model keeps them at home.",
+          "ai_task_entities": "An \"AI task\" is Home Assistant's connection to an AI model. It appears in this list once you have added an AI integration under Settings > Devices & services, for example Google Gemini, OpenRouter or Ollama; it is usually named after the provider. An empty list means that no such integration is set up yet. If you choose several, they are asked in this order and the first one that answers is used. A cloud model receives camera pictures of the child; a local model keeps them at home.",
           "ai_consent": "Required to use the AI assessment. Check your provider's terms on how pictures are used. With this set, the assessment runs by itself while monitoring is on; the switch \"AI assessment\" pauses it."
         }
       },
@@ -82,7 +82,8 @@
     "error": {
       "name_required": "Enter a name.",
       "no_sound_source": "Enter a Frigate camera or choose a crying sensor: without a sound source the monitor cannot hear the child.",
-      "no_alert_target": "Choose at least one phone or a local alarm; otherwise no alert could reach anyone.",
+      "no_alert_target": "Tick at least one phone or choose a local alarm; otherwise no alert could reach anyone.",
+      "only_babysitter": "The phone is ticked only under \"Babysitters' phones\" and would receive alerts in babysitter mode only. Tick at least one under \"Phones\", or choose a local alarm.",
       "ai_consent_required": "Confirm that images may be sent, or remove the AI tasks.",
       "must_acknowledge": "Confirm the notice to continue."
     },
@@ -106,30 +107,30 @@
       },
       "notify": {
         "title": "Who is told",
-        "description": "Choose the phones that receive alerts and, if you have one, a local alarm that works without internet. At least one of the two is required.",
+        "description": "Tick the phones that receive alerts and, if you have one, choose a local alarm that works without internet. At least one of the two is required.\n\nAfterwards, press \"Test alert\" on the device page: Home Assistant then shows in its notifications where the alert went.",
         "data": {
           "notify_services": "Phones",
           "local_alarm_entities": "Local alarm (siren, light, switch)",
-          "babysitter_service": "Babysitter's phone",
-          "heartbeat_buttons": "Dead-man heartbeat buttons"
+          "babysitter_service": "Babysitters' phones",
+          "heartbeat_buttons": "Sign of life for an outage buzzer (optional)"
         },
         "data_description": {
-          "notify_services": "Notify services of the Home Assistant companion app. Critical alerts go to all of them.",
-          "local_alarm_entities": "Switched on when an alert stays unanswered for a minute, or at once if the internet is down. Put it where you sleep, never in the child's room.",
-          "babysitter_service": "Receives alerts only while the mode is “Babysitter”.",
-          "heartbeat_buttons": "Pressed every 30 seconds while monitoring is armed and healthy, so that a separate device can sound when Home Assistant fails."
+          "notify_services": "Every phone with the Home Assistant app is listed by its name. A phone is missing? Open the Home Assistant app on it and sign in; it then appears here. Other notify services, for example a group, are listed as notify.… Critical alerts go to everyone ticked here.",
+          "local_alarm_entities": "Switched on when an alert stays unanswered for a minute, or at once if the internet is down. Put it where you sleep, never in the child's room. The device has to be reachable in Home Assistant: a lamp that is off at the wall switch stays dark.",
+          "babysitter_service": "For example grandparents or a babysitter. They receive alerts only while the mode is “Babysitter”, in addition to the phones above.",
+          "heartbeat_buttons": "Leave this empty unless you have built an outage buzzer (\"dead-man buzzer\"): a small device of its own that beeps when Home Assistant falls silent, for example after a crash or a power or Wi-Fi failure. CheckBaby presses the button chosen here every 30 seconds as a sign of life while monitoring is on and working; when the presses stop, the buzzer sounds. The documentation has a build example."
         }
       },
       "ai": {
         "title": "AI assessment (optional)",
         "description": "An AI model can look at a camera picture and say whether the child lies on its back, whether the face is free and whether loose things are in the bed. Leave this page empty to skip it; everything else works without it.\n\nThe model itself is added once in Home Assistant, not here: Settings > Devices & services > Add integration > Google Gemini or OpenRouter (you enter the API key there). After that the AI task appears in the list below. A local model through Ollama works the same way.",
         "data": {
-          "ai_task_entities": "AI task",
+          "ai_task_entities": "AI model (an \"AI task\" of Home Assistant)",
           "ai_consent": "Images of the child may be sent to these AI tasks",
           "ai_calls_per_hour": "AI calls per hour at most"
         },
         "data_description": {
-          "ai_task_entities": "If you choose several, they are asked in this order and the first one that answers is used. A cloud model receives camera pictures of the child; a local model keeps them at home.",
+          "ai_task_entities": "An \"AI task\" is Home Assistant's connection to an AI model. It appears in this list once you have added an AI integration under Settings > Devices & services, for example Google Gemini, OpenRouter or Ollama; it is usually named after the provider. An empty list means that no such integration is set up yet. If you choose several, they are asked in this order and the first one that answers is used. A cloud model receives camera pictures of the child; a local model keeps them at home.",
           "ai_consent": "Required to use the AI assessment. Check your provider's terms on how pictures are used. With this set, the assessment runs by itself while monitoring is on; the switch \"AI assessment\" pauses it."
         }
       },
@@ -150,7 +151,8 @@
       }
     },
     "error": {
-      "no_alert_target": "Choose at least one phone or a local alarm; otherwise no alert could reach anyone.",
+      "no_alert_target": "Tick at least one phone or choose a local alarm; otherwise no alert could reach anyone.",
+      "only_babysitter": "The phone is ticked only under \"Babysitters' phones\" and would receive alerts in babysitter mode only. Tick at least one under \"Phones\", or choose a local alarm.",
       "ai_consent_required": "Confirm that images may be sent, or remove the AI tasks."
     }
   },

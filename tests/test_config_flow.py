@@ -5,15 +5,18 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.config_entries import SOURCE_RECONFIGURE, SOURCE_USER
-from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
+
+from custom_components.checkbaby.config_flow import notify_options
 
 from custom_components.checkbaby.const import (
     CONF_ACKNOWLEDGED,
     CONF_AI_CONSENT,
     CONF_AI_ENTITIES,
+    CONF_BABYSITTER_SERVICE,
     CONF_BIRTH_DATE,
     CONF_CHILD_NAME,
     CONF_CRY_ENTITY,
@@ -28,7 +31,9 @@ from custom_components.checkbaby.const import (
     SUBENTRY_PLACE,
 )
 
-from .conftest import PARENT_A, setup
+from .conftest import PARENT_A, PARENT_B, make_entry, setup
+
+Pushes = dict[str, list[ServiceCall]]
 
 USER_INPUT = {CONF_CHILD_NAME: "  Testkind ", CONF_BIRTH_DATE: "2027-02-14"}
 PLACE_INPUT = {CONF_PLACE_NAME: " Crib ", CONF_FRIGATE_CAMERA: "nursery"}
@@ -42,7 +47,7 @@ async def _to_step(hass: HomeAssistant, *inputs: dict[str, Any]) -> Any:
     return result
 
 
-async def test_flow_creates_child_with_place_and_targets(hass: HomeAssistant) -> None:
+async def test_flow_creates_child_with_place_and_targets(hass: HomeAssistant, pushes: Pushes) -> None:
     result = await _to_step(hass)
     assert (result["type"], result["step_id"]) == (FlowResultType.FORM, "user")
     result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
@@ -76,7 +81,7 @@ async def test_flow_creates_child_with_place_and_targets(hass: HomeAssistant) ->
     assert CONF_PLACE_NAME not in places[0].data
 
 
-async def test_no_entry_without_acknowledgement(hass: HomeAssistant) -> None:
+async def test_no_entry_without_acknowledgement(hass: HomeAssistant, pushes: Pushes) -> None:
     # The AI page is left empty: the assessment is optional.
     result = await _to_step(hass, USER_INPUT, PLACE_INPUT, NOTIFY_INPUT, {}, {CONF_ACKNOWLEDGED: False})
 
@@ -123,6 +128,27 @@ async def test_alerts_need_somewhere_to_go(hass: HomeAssistant) -> None:
 
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_LOCAL_ALARM: ["siren.bedroom"]})
     assert result["step_id"] == "ai"
+
+
+async def test_phones_are_offered_by_the_name_of_the_device(hass: HomeAssistant) -> None:
+    for name in ("mobile_app_pixel_8", "mobile_app_old_tablet", "parents", "persistent_notification", "notify"):
+        async_mock_service(hass, "notify", name)
+    MockConfigEntry(domain="mobile_app", title="Pixel 8 (Mum)", data={"device_name": "Pixel 8"}).add_to_hass(hass)
+
+    options = notify_options(hass, ["mobile_app_gone", "parents"])
+
+    assert [(option["value"], option["label"]) for option in options] == [
+        ("mobile_app_old_tablet", "Old Tablet"),  # no entry to ask: the name is made readable
+        ("mobile_app_pixel_8", "Pixel 8 (Mum)"),
+        ("parents", "notify.parents"),  # any other notify service, here a group
+        ("mobile_app_gone", "mobile_app_gone ?"),  # chosen earlier, gone now: shown so it can be removed
+    ]
+
+
+async def test_a_phone_that_does_not_exist_cannot_be_chosen(hass: HomeAssistant, pushes: Pushes) -> None:
+    result = await _to_step(hass, USER_INPUT, PLACE_INPUT)
+    with pytest.raises(InvalidData):
+        await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_NOTIFY_SERVICES: ["mobile_app_typo"]})
 
 
 async def _options_page(hass: HomeAssistant, entry: MockConfigEntry, page: str) -> Any:
@@ -187,6 +213,35 @@ async def test_options_cannot_remove_the_last_alert_target(hass: HomeAssistant, 
     result = await _options_page(hass, config_entry, "notify")
     result = await hass.config_entries.options.async_configure(result["flow_id"], {CONF_NOTIFY_SERVICES: []})
     assert result["errors"] == {"base": "no_alert_target"}
+
+
+async def test_a_phone_only_under_babysitters_is_not_enough(hass: HomeAssistant, pushes: Pushes) -> None:
+    entry = make_entry(options={CONF_NOTIFY_SERVICES: [PARENT_A]})
+    await setup(hass, entry)
+    result = await _options_page(hass, entry, "notify")
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_NOTIFY_SERVICES: [], CONF_BABYSITTER_SERVICE: [PARENT_B]}
+    )
+    assert result["errors"] == {"base": "only_babysitter"}
+
+
+async def test_several_babysitter_phones(hass: HomeAssistant, pushes: Pushes) -> None:
+    # An earlier version stored one babysitter phone as a plain name.
+    entry = make_entry(options={CONF_NOTIFY_SERVICES: [PARENT_A], CONF_BABYSITTER_SERVICE: PARENT_B})
+    await setup(hass, entry)
+    async_mock_service(hass, "notify", "mobile_app_granny")
+
+    result = await _options_page(hass, entry, "notify")
+    suggested = {str(key): key.description for key in result["data_schema"].schema}
+    assert suggested[CONF_BABYSITTER_SERVICE] == {"suggested_value": [PARENT_B]}
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {CONF_NOTIFY_SERVICES: [PARENT_A], CONF_BABYSITTER_SERVICE: [PARENT_B, "mobile_app_granny"]},
+    )
+    await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_BABYSITTER_SERVICE] == [PARENT_B, "mobile_app_granny"]
 
 
 async def test_add_and_change_a_sleep_place(hass: HomeAssistant, config_entry: MockConfigEntry) -> None:

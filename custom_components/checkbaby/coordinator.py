@@ -17,7 +17,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, CoreState, Event, HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.storage import Store
@@ -36,6 +36,7 @@ from .const import (
     CONF_AI_ENTITIES,
     CONF_HEARTBEAT_BUTTONS,
     CONF_INTERNET_ENTITY,
+    CONF_LOCAL_ALARM,
     CONF_SMOKE_ENTITIES,
     CONF_TOPIC_PREFIX,
     CONF_VOX_PLAYER,
@@ -51,6 +52,7 @@ from .const import (
     SOURCE_CRY_SENSOR,
     SOURCE_ENGINE,
     SOURCE_FRIGATE,
+    SOURCE_LOCAL_ALARM,
     SOURCE_MQTT,
     SOURCE_NOTIFY,
     SOURCE_PLACE,
@@ -66,7 +68,7 @@ from .notifier import Notifier
 from .profiles import AgeProfile, profile_for
 from .report import night_report, night_report_text, quick_check_text
 from .settings import Settings
-from .texts import state_name, text
+from .texts import assessment_text, state_name, text
 from .types import AlertLevel, ChildState, Stage
 from .vox import VoxAction
 
@@ -81,6 +83,7 @@ _SOURCES = (
     SOURCE_ENGINE,
     SOURCE_PLACE,
     SOURCE_VITAL_SENSOR,
+    SOURCE_LOCAL_ALARM,
 )
 _ENGINE_VALID = ("periodic", "gross_motion", "no_motion")
 # A radar reading that has not been reported again for this long is not a reading.
@@ -118,6 +121,7 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
         self._mqtt_subscribed = False
         self._save_scheduled = False
         self._assessing = False
+        self.ai_error = ""
         self._last_heartbeat = 0.0
         self._last_refresh = 0.0
         self._stopping = False
@@ -232,6 +236,9 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
         for name in _SOURCES:
             watchdog.forget(name)
         watchdog.expect(SOURCE_NOTIFY)
+        if self._options(CONF_LOCAL_ALARM):
+            # A local alarm that cannot be reached is shown; it wakes nobody by itself.
+            watchdog.expect(SOURCE_LOCAL_ALARM, minor=True)
         self._mqtt_expected = False
         self._mqtt_subscribed = False
         place = self.active_place
@@ -400,20 +407,35 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             return None
         return value if value == value else None  # NaN is not a reading
 
+    def _health(self, source: str, healthy: bool, now: float) -> None:
+        """Record whether something Home Assistant provides is there.
+
+        While Home Assistant is still starting, other integrations have not
+        loaded their phones, entities and connections yet: missing then says
+        nothing, and the watchdog's grace period covers the wait.
+        """
+        if healthy or self.hass.state is CoreState.running:
+            self.monitor.watchdog.set_healthy(source, healthy, now)
+
     def _poll_entities(self, now: float) -> None:
         """Read the mapped entities into the monitor."""
         monitor = self.monitor
-        signals, watchdog = monitor.signals, monitor.watchdog
+        signals = monitor.signals
         place = self.active_place
 
         smoke = [self._is_on(entity_id) for entity_id in self._options(CONF_SMOKE_ENTITIES, [])]
         signals.smoke.set(any(value is True for value in smoke), now)
         internet_entity = self._options(CONF_INTERNET_ENTITY)
         signals.internet = self._is_on(internet_entity) if internet_entity else None
-        missing = self.notifier.missing_services()
-        watchdog.set_healthy(SOURCE_NOTIFY, self.notifier.has_target() and not missing, now)
+        notifier = self.notifier
+        local, local_down = self._options(CONF_LOCAL_ALARM, []), notifier.local_alarm_unavailable()
+        # Someone must be reachable: every chosen phone exists, and without a phone the local alarm works.
+        reachable = bool(notifier.all_services()) or len(local_down) < len(local)
+        self._health(SOURCE_NOTIFY, reachable and not notifier.missing_services(), now)
+        if local:
+            self._health(SOURCE_LOCAL_ALARM, not local_down, now)
         if self._mqtt_expected:
-            watchdog.set_healthy(SOURCE_MQTT, self._mqtt_connected(), now)
+            self._health(SOURCE_MQTT, self._mqtt_connected(), now)
         if place is None:
             return
 
@@ -427,7 +449,7 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
                 crying = self._is_on(place.cry_entity)
                 if crying is not None:
                     signals.crying.set(crying, now)
-                watchdog.set_healthy(SOURCE_CRY_SENSOR, crying is not None, now)
+                self._health(SOURCE_CRY_SENSOR, crying is not None, now)
             if place.motion_entity and (motion := self._is_on(place.motion_entity)) is not None:
                 monitor.set_motion(motion, now)
             if place.level_entity:
@@ -435,7 +457,7 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
                 value = self._number(place.level_entity)
                 if value is not None:
                     signals.set_level(value, self.settings.noise_margin_db, now)
-                watchdog.set_healthy(SOURCE_AUDIO, value is not None, now)
+                self._health(SOURCE_AUDIO, value is not None, now)
         signals.temperature = self._celsius(place.temperature_entity)
         signals.humidity = self._number(place.humidity_entity)
         self.heart_rate = self._number(place.heart_rate_entity)
@@ -444,10 +466,10 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             signals.set_vital(
                 VITAL_RADAR, valid=rate is not None, breathing=bool(rate), moving=False, rate=rate, now=now
             )
-            watchdog.set_healthy(SOURCE_VITAL_SENSOR, rate is not None, now)
+            self._health(SOURCE_VITAL_SENSOR, rate is not None, now)
         if place.camera_entity:
             camera = self.hass.states.get(place.camera_entity)
-            watchdog.set_healthy(SOURCE_CAMERA, camera is not None and camera.state != STATE_UNAVAILABLE, now)
+            self._health(SOURCE_CAMERA, camera is not None and camera.state != STATE_UNAVAILABLE, now)
 
     def _mqtt_connected(self) -> bool:
         if not self._mqtt_available():
@@ -525,7 +547,9 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
     def _heartbeat(self) -> None:
         """Press the dead-man buttons while monitoring is armed and healthy."""
         buttons = list(self._options(CONF_HEARTBEAT_BUTTONS, []))
-        if not buttons or not self.settings.armed or self.monitor.problems:
+        # Only problems that matter stop the heartbeat: a lost picture must not
+        # make the dead-man buzzer sound.
+        if not buttons or not self.settings.armed or self.monitor.serious_problems():
             return
         self.config_entry.async_create_background_task(
             self.hass, self._async_call("button", "press", {"entity_id": buttons}), f"{DOMAIN} heartbeat"
@@ -565,21 +589,42 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
     async def _handle_stop(self, event: Event[Any]) -> None:
         """Home Assistant is going down: say so while armed, then save."""
         if self.settings.armed and not self.settings.privacy:
-            await self.notifier.async_send_text(text(self.language, "stopping", child=self.child_name))
+            await self.notifier.async_send_text(text(self.language, "stopping", child=self.child_name), topic="stopping")
         await self._store.async_save(self._data_to_save())
 
     # -- AI ----------------------------------------------------------------
 
-    def _ai_ready(self) -> bool:
+    def _ai_blocker(self) -> str | None:
+        """Why no AI check can run, as the key of a text; None if one can."""
         place = self.active_place
-        return bool(
-            self._options(CONF_AI_ENTITIES)
-            and self._options(CONF_AI_CONSENT, False)
+        if not self._options(CONF_AI_ENTITIES):
+            return "ai_off_none"
+        if not self._options(CONF_AI_CONSENT, False):
+            return "ai_off_consent"
+        if self.settings.privacy:
             # In privacy mode no image leaves the house, not even on request.
-            and not self.settings.privacy
-            and place is not None
-            and place.camera_entity
-        )
+            return "ai_off_privacy"
+        if place is None or not place.camera_entity:
+            return "ai_off_camera"
+        return None
+
+    def _ai_ready(self) -> bool:
+        return self._ai_blocker() is None
+
+    async def async_assess_and_tell(self) -> Assessment | None:
+        """Run a check someone asked for and show what came of it, also if nothing did."""
+        blocker = "ai_off_busy" if self._assessing else self._ai_blocker()
+        assessment = None
+        if blocker is not None:
+            message = text(self.language, blocker)
+        else:
+            assessment = await self.async_assess("manual", manual=True)
+            if assessment is None:
+                message = text(self.language, "ai_failed", error=self.ai_error)
+            else:
+                message = assessment_text(self.language, assessment.verdict, assessment.confidence, assessment.reason)
+        await self.notifier.async_send_text(message, topic="ai_check")
+        return assessment
 
     async def async_assess(self, reason: str, *, manual: bool = False) -> Assessment | None:
         """Ask the configured AI tasks, in order, for an assessment of a fresh image."""
@@ -631,6 +676,7 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
                     self.monitor.apply_assessment(assessment, self._now(), profile, reason)
                     return assessment
                 error = f"{entity_id}: unusable answer"
+            self.ai_error = error
             self.monitor.ai_failed(self._now(), error)
             return None
         finally:

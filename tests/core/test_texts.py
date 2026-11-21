@@ -7,7 +7,17 @@ import pytest
 from custom_components.checkbaby.push import build_clear, build_push, notification_tag
 from custom_components.checkbaby.report import night_report, night_report_text, quick_check_text
 from custom_components.checkbaby.sleep_log import SleepLog
-from custom_components.checkbaby.texts import _DE, _EN, alert_message, alert_title, problem_names, state_name, text
+from custom_components.checkbaby.texts import (
+    _DE,
+    _EN,
+    alert_message,
+    alert_title,
+    assessment_text,
+    delivery_report,
+    problem_names,
+    state_name,
+    text,
+)
 from custom_components.checkbaby.types import AlertKind, AlertLevel, ChildState
 
 from .helpers import Night
@@ -115,3 +125,28 @@ def test_quick_check_text_mentions_what_matters() -> None:
     assert "unbekannt" in summary
     assert "Aktiver Alarm" in summary
     assert "Störungen: kein Ton von der Kamera" in summary
+
+
+def test_delivery_report_names_every_channel() -> None:
+    quiet = delivery_report("en", sent=[], failed=[], local=[], local_down=[])
+    assert quiet == "No phone is chosen, so no push was sent.\nNo local alarm is set up."
+
+    mixed = delivery_report(
+        "de",
+        sent=["notify.a"],
+        failed=["notify.b"],
+        local=["siren.bedroom", "light.hall"],
+        local_down=["light.hall"],
+    ).split("\n")
+    assert mixed[0] == "Gesendet an: notify.a."
+    assert mixed[1].startswith("NICHT gesendet an: notify.b.")
+    assert mixed[2].startswith("Lokaler Alarm: siren.bedroom.")
+    assert mixed[3] == "Lokaler Alarm NICHT erreichbar: light.hall."
+    assert mixed[4].startswith("Nichts auf dem Handy?")  # only when something was sent
+
+
+def test_assessment_text() -> None:
+    assert assessment_text("en", "ok", 0.9, "Sleeping on the back.") == "Looks fine (90 % sure). Sleeping on the back."
+    assert assessment_text("de", "critical", 0.55, "") == "Mögliche Gefahr (55 % sicher)."
+    assert assessment_text("en", "odd", 1.0, "x") == "odd (100 % sure). x"
+    assert "lokaler Alarm nicht erreichbar" in problem_names("de", ["local_alarm"])

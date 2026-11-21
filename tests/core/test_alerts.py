@@ -126,6 +126,25 @@ def test_cooldown_stops_a_flapping_warning_from_pushing_again() -> None:
     assert _stages(manager) == [Stage.FIRST]
 
 
+def test_a_hint_that_ends_does_not_swallow_the_next_warning() -> None:
+    manager = AlertManager()
+    manager.raise_alert(AlertKind.MONITORING_FAILURE, AlertLevel.INFO, {}, T0)
+    manager.clear(AlertKind.MONITORING_FAILURE, T0 + 10)
+
+    manager.raise_alert(AlertKind.MONITORING_FAILURE, AlertLevel.WARNING, {}, T0 + 30)
+
+    assert _stages(manager) == [Stage.FIRST]
+
+
+def test_a_snoozed_warning_that_ends_does_not_start_the_cooldown() -> None:
+    manager = AlertManager()
+    manager.snooze(T0 + 300, T0)
+    manager.raise_alert(AlertKind.CRYING, AlertLevel.WARNING, {}, T0 + 1)  # never reached a phone
+    manager.clear(AlertKind.CRYING, T0 + 20)
+    manager.raise_alert(AlertKind.CRYING, AlertLevel.WARNING, {}, T0 + 310)
+    assert _stages(manager) == [Stage.FIRST]
+
+
 def test_cooldown_never_applies_to_critical() -> None:
     manager = AlertManager()
     manager.raise_alert(AlertKind.NO_BREATHING, AlertLevel.CRITICAL, {}, T0)

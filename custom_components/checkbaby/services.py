@@ -79,7 +79,7 @@ async def _quick_check(call: ServiceCall) -> ServiceResponse:
         await coordinator.async_assess("manual", manual=True)
     result = coordinator.quick_check()
     if call.data[ATTR_NOTIFY]:
-        await coordinator.notifier.async_send_text(result["summary"], level=AlertLevel.INFO)
+        await coordinator.notifier.async_send_text(result["summary"], topic="quick_check")
     return result
 
 
@@ -87,7 +87,7 @@ async def _night_report(call: ServiceCall) -> ServiceResponse:
     coordinator = _coordinator(call)
     result = coordinator.night_report()
     if call.data[ATTR_NOTIFY]:
-        await coordinator.notifier.async_send_text(result["summary"], level=AlertLevel.INFO)
+        await coordinator.notifier.async_send_text(result["summary"], topic="night_report")
     return result
 
 

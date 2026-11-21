@@ -48,7 +48,7 @@ liegt auch in `lab/reports/latest.json`. Jeder Lauf beginnt in einem leeren, tem
 
 | Szenario | Was geprüft wird |
 |---|---|
-| Einrichtung | Alle Dialoge über die Frontend-Schnittstelle: Kind, Schlafplatz, Ziele, Zweckbestimmung, Optionen, zweiter Schlafplatz |
+| Einrichtung | Alle Dialoge über die Frontend-Schnittstelle: Kind, Schlafplatz, Ziele als Ankreuzfelder mit Namen, Zweckbestimmung, Optionen, zweiter Schlafplatz |
 | Grundzustand | Ton kommt über MQTT an, Zustand „schläft", keine Meldung bei Ruhe |
 | Nachrichtenflut | 40 MQTT-Nachrichten pro Sekunde bremsen nichts |
 | Weinen | Warnung an das Handy im Dienst, Bild abrufbar, Ton-Weiterleitung, lokaler Alarm nach einer Minute, kritisch an alle, Wiederholung, „Gesehen", Ende nach Ruhe |
@@ -58,8 +58,8 @@ liegt auch in `lab/reports/latest.json`. Jeder Lauf beginnt in einem leeren, tem
 | Atembewegung | Herausheben löst nichts aus, Stillstand nach gesehener Atmung wird kritisch, Radar ohne Wert ist eine Störung |
 | Vital-Engine | Echter Engine-Prozess meldet das Testmuster, Absturz wird gemeldet |
 | Rauch und Internet | Rauch trotz ausgeschalteter Überwachung, lokaler Alarm sofort ohne Internet |
-| Berichte | Schnell-Check, Nachtbericht, Herzschlag, Diagnose ohne Namen des Kindes |
-| Neustart | Zustand auf der Platte, Einstellungen und Schlafprotokoll nach dem Neustart |
+| Berichte | Schnell-Check, KI-Check und Testalarm zeigen ihr Ergebnis in den Benachrichtigungen von Home Assistant; Zustellbericht; nicht erreichbarer lokaler Alarm; Nachtbericht, Herzschlag, Diagnose ohne Namen des Kindes |
+| Neustart | Zustand auf der Platte, Einstellungen und Schlafprotokoll nach dem Neustart, keine falsche Störungswarnung beim Hochfahren |
 
 Mit `--long` wartet der Lauf vor dem Neustart zusätzlich zwei Minuten und prüft die Meldung „war unterbrochen".
 Mit `--only crying_chain ai_assessment` laufen nach Einrichtung und Grundzustand nur die genannten Szenarien.
@@ -112,6 +112,12 @@ Fehler, die erst im echten Home Assistant sichtbar wurden und behoben sind:
   Atembewegungs-Alarm ausgeschaltet war.
 - Der Schritt von Warnung zu kritisch startete die Minute bis zum lokalen Alarm neu.
 - Bei kurzer Warnzeit meldete die Nachricht „weint", während der Zustand noch „schläft" zeigte.
+- Direkt nach einem Neustart galten Handys und Geräte anderer Integrationen als fehlend, solange diese noch
+  luden, und lösten bei eingeschalteter Überwachung eine Störungswarnung aus.
+
+In der echten Oberfläche (Labor zum Anfassen, mit einem Browser bedient) nachgestellt wurde außerdem ein Fehler
+aus dem ersten Praxistest: Im alten Auswahlfeld für Handys ging verloren, was getippt statt aus der Liste
+gewählt wurde. Seitdem sind es Ankreuzfelder.
 
 Und eine Falle im Labor selbst, die auch andere Labore trifft: Home Assistant ab 2026.11 behandelt einen
 `http:`-Block aus YAML als Probelauf und startet sich fünf Minuten nach dem Start neu, wenn er nicht

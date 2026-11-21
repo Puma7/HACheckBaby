@@ -22,8 +22,10 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
 )
 from homeassistant.util import slugify
@@ -66,6 +68,7 @@ from .const import (
     DOMAIN,
     SUBENTRY_PLACE,
 )
+from .notifier import as_list
 from .schema_compat import vol
 
 
@@ -105,17 +108,43 @@ PLACE_SCHEMA = vol.Schema(
 )
 
 
-def _mobile_apps(hass: HomeAssistant) -> list[str]:
-    """The notify services of the companion apps."""
-    return sorted(name for name in hass.services.async_services().get("notify", {}) if name.startswith("mobile_app_"))
+# Notify services that are no person's device.
+_GENERIC_NOTIFY = frozenset({"notify", "persistent_notification", "send_message"})
+_APP_PREFIX = "mobile_app_"
 
 
-def _notify_fields(hass: HomeAssistant) -> dict[Any, Any]:
-    apps = _mobile_apps(hass)
+def notify_options(hass: HomeAssistant, chosen: list[str]) -> list[SelectOptionDict]:
+    """Everything an alert can be sent to: the phones first, by the name of the device.
+
+    A target that was chosen earlier and no longer exists stays in the list, so
+    that it can be seen and removed.
+    """
+    names = {
+        f"{_APP_PREFIX}{slugify(str(entry.data.get('device_name') or entry.title))}": entry.title
+        for entry in hass.config_entries.async_entries("mobile_app")
+    }
+    services = [name for name in hass.services.async_services().get("notify", {}) if name not in _GENERIC_NOTIFY]
+    phones = sorted(name for name in services if name.startswith(_APP_PREFIX))
+    others = sorted(name for name in services if not name.startswith(_APP_PREFIX))
+    options = [
+        SelectOptionDict(value=name, label=names.get(name) or name.removeprefix(_APP_PREFIX).replace("_", " ").title())
+        for name in phones
+    ]
+    options += [SelectOptionDict(value=name, label=f"notify.{name}") for name in others]
+    options += [SelectOptionDict(value=name, label=f"{name} ?") for name in chosen if name not in services]
+    return options
+
+
+def _targets(hass: HomeAssistant, chosen: list[str]) -> Any:
+    """Tick boxes: nothing to type, nothing that can get lost."""
+    return SelectSelector(
+        SelectSelectorConfig(options=notify_options(hass, chosen), multiple=True, mode=SelectSelectorMode.LIST)
+    )
+
+
+def _notify_fields(hass: HomeAssistant, chosen: list[str]) -> dict[Any, Any]:
     return {
-        vol.Optional(CONF_NOTIFY_SERVICES, default=[]): SelectSelector(
-            SelectSelectorConfig(options=apps, multiple=True, custom_value=True)
-        ),
+        vol.Optional(CONF_NOTIFY_SERVICES, default=[]): _targets(hass, chosen),
         vol.Optional(CONF_LOCAL_ALARM, default=[]): _entity(["siren", "light", "switch"], multiple=True),
     }
 
@@ -127,13 +156,13 @@ def _ai_fields() -> dict[Any, Any]:
     }
 
 
-def _section_fields(hass: HomeAssistant, section: str) -> dict[Any, Any]:
+def _section_fields(hass: HomeAssistant, section: str, options: dict[str, Any]) -> dict[Any, Any]:
     """The fields of one page of the options: who is told, the AI, or the other devices."""
     if section == "notify":
         return {
-            **_notify_fields(hass),
-            vol.Optional(CONF_BABYSITTER_SERVICE): SelectSelector(
-                SelectSelectorConfig(options=_mobile_apps(hass), custom_value=True)
+            **_notify_fields(hass, as_list(options.get(CONF_NOTIFY_SERVICES))),
+            vol.Optional(CONF_BABYSITTER_SERVICE, default=[]): _targets(
+                hass, as_list(options.get(CONF_BABYSITTER_SERVICE))
             ),
             vol.Optional(CONF_HEARTBEAT_BUTTONS, default=[]): _entity(["button", "input_button"], multiple=True),
         }
@@ -179,9 +208,10 @@ def validate_place(user_input: dict[str, Any]) -> tuple[dict[str, Any], dict[str
 
 def validate_targets(user_input: dict[str, Any]) -> dict[str, str]:
     """Report input that would leave the monitor unable to alert anyone."""
-    if not user_input.get(CONF_NOTIFY_SERVICES) and not user_input.get(CONF_LOCAL_ALARM):
-        return {"base": "no_alert_target"}
-    return {}
+    if user_input.get(CONF_NOTIFY_SERVICES) or user_input.get(CONF_LOCAL_ALARM):
+        return {}
+    # A phone ticked only under "babysitter" is told in babysitter mode and at no other time.
+    return {"base": "only_babysitter" if user_input.get(CONF_BABYSITTER_SERVICE) else "no_alert_target"}
 
 
 def validate_nothing(user_input: dict[str, Any]) -> dict[str, str]:
@@ -261,7 +291,7 @@ class CheckBabyConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._options = dict(user_input)
                 return await self.async_step_ai()
 
-        schema = vol.Schema(_notify_fields(self.hass))
+        schema = vol.Schema(_notify_fields(self.hass, []))
         return self.async_show_form(
             step_id="notify",
             data_schema=self.add_suggested_values_to_schema(schema, user_input),
@@ -342,8 +372,11 @@ class CheckBabyOptionsFlow(OptionsFlow):
                 kept = {key: value for key, value in self.config_entry.options.items() if key not in SECTION_KEYS[section]}
                 return self.async_create_entry(data={**kept, **user_input})
 
-        schema = vol.Schema(_section_fields(self.hass, section))
-        suggested = user_input if user_input is not None else dict(self.config_entry.options)
+        stored = dict(self.config_entry.options)
+        # Earlier versions kept one babysitter phone as a plain name.
+        stored[CONF_BABYSITTER_SERVICE] = as_list(stored.get(CONF_BABYSITTER_SERVICE))
+        schema = vol.Schema(_section_fields(self.hass, section, stored))
+        suggested = user_input if user_input is not None else stored
         return self.async_show_form(
             step_id=section,
             data_schema=self.add_suggested_values_to_schema(schema, suggested),
