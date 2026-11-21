@@ -98,6 +98,7 @@ async def boot(config_dir: Path, http_port: int, *, frontend: bool = False) -> A
     # Drop modules of a previous instance so that the new one loads fresh code.
     for name in [name for name in sys.modules if name.startswith("custom_components")]:
         del sys.modules[name]
+    _trace_stops(core)
     hass = core.HomeAssistant(str(config_dir))
     loader.async_setup(hass)
     config: dict[str, Any] = {
@@ -142,18 +143,27 @@ async def boot(config_dir: Path, http_port: int, *, frontend: bool = False) -> A
         raise RuntimeError("Home Assistant did not boot")
     await hass.async_start()
     await hass.async_block_till_done()
+    return hass
 
-    # If anything but the lab stops Home Assistant, say who it was.
-    original_stop = hass.async_stop
 
-    async def traced_stop(*args: Any, **kwargs: Any) -> Any:
-        if not getattr(hass, "lab_stopping", False):
+def _trace_stops(core: Any) -> None:
+    """If anything but the lab stops Home Assistant, say who it was.
+
+    Patched on the class and before the instance exists, so that references to
+    the method taken during start-up (the stop and restart actions) are traced too.
+    """
+    if getattr(core.HomeAssistant, "lab_traced", False):
+        return
+    original_stop = core.HomeAssistant.async_stop
+
+    async def traced_stop(self: Any, *args: Any, **kwargs: Any) -> Any:
+        if not getattr(self, "lab_stopping", False):
             print("Home Assistant is being stopped by:", flush=True)
             traceback.print_stack()
-        return await original_stop(*args, **kwargs)
+        return await original_stop(self, *args, **kwargs)
 
-    hass.async_stop = traced_stop
-    return hass
+    core.HomeAssistant.async_stop = traced_stop
+    core.HomeAssistant.lab_traced = True
 
 
 async def admin_token(hass: Any) -> str:
