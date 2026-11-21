@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up CheckBaby",
+        "description": "One entry per child. You can set this up before the birth: enter the expected due date and correct it later.",
+        "data": {
+          "child_name": "Name of the child",
+          "birth_date": "Birth date or expected due date"
+        },
+        "data_description": {
+          "child_name": "Used for the device and its entities.",
+          "birth_date": "Selects the age profile and its default thresholds."
+        }
+      },
+      "disclaimer": {
+        "title": "What CheckBaby is, and what it is not",
+        "description": "CheckBaby is not a medical device. It cannot prevent sudden infant death and it can fail without warning. It supports your supervision and the rules for safe infant sleep; it does not replace either. Keep a simple baby monitor as a fallback.",
+        "data": {
+          "acknowledged": "I have read and understood this"
+        }
+      }
+    },
+    "error": {
+      "name_required": "Enter a name.",
+      "must_acknowledge": "Confirm the notice to continue."
+    },
+    "abort": {
+      "already_configured": "A child with this name is already set up."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "age_profile": {
+        "name": "Age profile",
+        "state": {
+          "newborn": "Newborn",
+          "infant": "Infant",
+          "toddler": "Toddler"
+        }
+      }
+    }
+  }
+}

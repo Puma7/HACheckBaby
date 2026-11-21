@@ -1,0 +1,38 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.13 resolves the oldest supported Home Assistant (the floor in
+        # hacs.json), 3.14 the newest release.
+        python-version: ["3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pytest
+      # Both checkers parse Home Assistant's own sources, so they must assume
+      # the Python version this job runs.
+      - run: mypy --python-version ${{ matrix.python-version }} custom_components/checkbaby/
+      - run: pyright --pythonversion ${{ matrix.python-version }}
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration
+          # Brand images follow before v1.0 (see docs/MASTERPLAN.md).
+          ignore: brands

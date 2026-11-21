@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "CheckBaby einrichten",
+        "description": "Ein Eintrag pro Kind. Die Einrichtung geht schon vor der Geburt: errechneten Termin eintragen und später korrigieren.",
+        "data": {
+          "child_name": "Name des Kindes",
+          "birth_date": "Geburtsdatum oder errechneter Termin"
+        },
+        "data_description": {
+          "child_name": "Wird für das Gerät und seine Entitäten verwendet.",
+          "birth_date": "Bestimmt das Altersprofil und dessen Startwerte."
+        }
+      },
+      "disclaimer": {
+        "title": "Was CheckBaby ist und was nicht",
+        "description": "CheckBaby ist kein Medizinprodukt. Es kann den plötzlichen Kindstod nicht verhindern und kann ohne Vorwarnung ausfallen. Es unterstützt deine Aufsicht und die Regeln für sicheren Babyschlaf, ersetzt aber beides nicht. Behalte ein einfaches Babyphone als Rückfallebene.",
+        "data": {
+          "acknowledged": "Ich habe das gelesen und verstanden"
+        }
+      }
+    },
+    "error": {
+      "name_required": "Bitte einen Namen eingeben.",
+      "must_acknowledge": "Bitte den Hinweis bestätigen, um fortzufahren."
+    },
+    "abort": {
+      "already_configured": "Ein Kind mit diesem Namen ist bereits eingerichtet."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "age_profile": {
+        "name": "Altersprofil",
+        "state": {
+          "newborn": "Neugeborenes",
+          "infant": "Säugling",
+          "toddler": "Kleinkind"
+        }
+      }
+    }
+  }
+}

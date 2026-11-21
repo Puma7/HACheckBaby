@@ -1,0 +1,13 @@
+{
+  "domain": "checkbaby",
+  "name": "CheckBaby",
+  "codeowners": ["@Puma7"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/Puma7/HACheckBaby",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/Puma7/HACheckBaby/issues",
+  "requirements": [],
+  "version": "0.0.1"
+}

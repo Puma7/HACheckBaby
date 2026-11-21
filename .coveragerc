@@ -1,0 +1,3 @@
+[report]
+# Ratchet: measured total over the whole package (no omit). It may only go up.
+fail_under = 100

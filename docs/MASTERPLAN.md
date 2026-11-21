@@ -1,6 +1,6 @@
 # HACheckBaby – Masterplan
 
-Stand: 21.11.2026 (dritte Fassung: Entscheidungen eingearbeitet, Hardware, Einrichtung und zweite Ideenrunde ergänzt) · Status: Planungsphase, noch kein Code
+Stand: 21.11.2026 (dritte Fassung: Entscheidungen eingearbeitet, Hardware, Einrichtung und zweite Ideenrunde ergänzt) · Status: Phase 0 läuft. Das Repo-Gerüst steht (installierbare Integration, Tests, CI); die Prüfungen am echten System stehen aus, siehe [Checkliste](development/phase-0-checkliste.md)
 
 Ein lokales, smartes Babyphone für Home Assistant, das auf Frigate aufsetzt und über HACS installiert wird. Es soll alles können, was ein klassisches Babyphone kann, und darüber hinaus die Lage im Bett bewerten: nicht nur „es bewegt sich etwas" oder „es ist laut", sondern „geht es dem Kind gut?".
 
@@ -97,7 +97,7 @@ Daraus folgt für uns:
 
 **Voraussetzungen beim Nutzer**
 
-- Home Assistant mit MQTT-Broker, Frigate (Mindestversion in Phase 0 festlegen, Vorschlag ≥ 0.16) mit go2rtc.
+- Home Assistant ab 2026.2 mit MQTT-Broker, Frigate (Mindestversion in Phase 0 festlegen, Vorschlag ≥ 0.16) mit go2rtc.
 - Kamera mit RTSP **und** Audio (AAC), brauchbares Infrarot-Nachtbild, Montage möglichst senkrecht über dem Bett, Kabel außer Reichweite (mindestens 1 m).
 - Companion-App auf den Eltern-Handys.
 - Optional: Rechner mit GPU für ein lokales Bildmodell, mmWave-Radar, Raumklimasensor.
@@ -166,7 +166,7 @@ flowchart LR
 
 ### 5.1 Komponenten
 
-**A. Integration `checkbaby` (HACS, `custom_components/`)** – das eigentliche Produkt. Orchestriert, rechnet aber nichts Schweres. `iot_class: local_push`, `integration_type: device`, ein Config-Eintrag pro Kind/Bett.
+**A. Integration `checkbaby` (HACS, `custom_components/`)** – das eigentliche Produkt. Orchestriert, rechnet aber nichts Schweres. `iot_class: local_push`, `integration_type: service`, ein Config-Eintrag pro Kind (Schlafplätze darunter, siehe 5.10).
 
 **B. Vital-Engine (ab Phase 3, eigener Container/Add-on)** – zieht den Substream aus go2rtc, berechnet Atem-Mikrobewegung und veröffentlicht Ergebnis plus Signalqualität per MQTT. Bewusst getrennt von Home Assistant: Dauerhafte Videodekodierung im HA-Prozess gefährdet bei Fehlern oder Speicherlecks die gesamte Hausautomation. HACS kann keine Add-ons installieren; das Add-on-Repository kann aber im selben GitHub-Repo liegen, für HA-Container-Nutzer gibt es eine Compose-Datei. Ob Monorepo oder zweites Repo, klärt der Spike in Phase 0.
 

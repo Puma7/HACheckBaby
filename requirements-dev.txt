@@ -1,0 +1,5 @@
+# The test plugin pins the Home Assistant version it was built for, so pip
+# resolves the newest Home Assistant that supports the running Python.
+pytest-homeassistant-custom-component
+mypy>=1.10
+pyright>=1.1.380

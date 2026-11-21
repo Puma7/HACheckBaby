@@ -1,0 +1,15 @@
+{
+  "typeCheckingMode": "strict",
+  "include": [
+    "custom_components/checkbaby"
+  ],
+  "exclude": [],
+  "pythonVersion": "3.13",
+  "reportMissingTypeStubs": false,
+  "reportPrivateUsage": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false,
+  "reportIncompatibleVariableOverride": false
+}
