@@ -225,6 +225,28 @@ def test_local_channel_stays_on_when_the_alert_gets_worse() -> None:
     assert _stages(manager).count(Stage.LOCAL) == 1  # fired once, not again
 
 
+def test_local_channel_counts_the_whole_time_without_an_answer() -> None:
+    """Found in the lab: the step to critical restarted the minute, so the siren came late."""
+    manager = AlertManager()
+    manager.raise_alert(AlertKind.CRYING, AlertLevel.WARNING, {}, T0)
+    manager.raise_alert(AlertKind.CRYING, AlertLevel.CRITICAL, {}, T0 + 55)
+    manager.tick(T0 + 59)
+    assert manager.local_wanted() is False
+    manager.tick(T0 + 60)
+    assert manager.local_wanted() is True
+
+
+def test_after_an_answer_the_minute_starts_again() -> None:
+    manager = AlertManager()
+    manager.raise_alert(AlertKind.CRYING, AlertLevel.WARNING, {}, T0)
+    manager.acknowledge(T0 + 50)
+    manager.raise_alert(AlertKind.CRYING, AlertLevel.CRITICAL, {}, T0 + 55)
+    manager.tick(T0 + 100)
+    assert manager.local_wanted() is False
+    manager.tick(T0 + 115)
+    assert manager.local_wanted() is True
+
+
 def test_internet_down_fires_local_channel_at_once() -> None:
     manager = AlertManager()
     manager.local_immediately = True

@@ -44,6 +44,9 @@ class Alert:
     escalated: bool = False
     local_fired: bool = False
     shadow: bool = False
+    # Since when a notification has been out without an answer. It survives the
+    # alert getting worse: a minute without a reaction is a minute, whatever the level.
+    unanswered_since: float | None = None
 
 
 @dataclass(frozen=True)
@@ -181,6 +184,7 @@ class AlertManager:
             if alert.shadow or alert.acked or alert.level < AlertLevel.WARNING:
                 continue
             alert.acked = True
+            alert.unanswered_since = None
             count += 1
             self._out.append(
                 Notification(alert.kind, alert.level, Stage.ACKNOWLEDGED, Audience.ALL, alert.detail)
@@ -198,6 +202,7 @@ class AlertManager:
             if alert.notified:
                 alert.notified = False
                 alert.local_fired = False
+                alert.unanswered_since = None
                 self._out.append(
                     Notification(alert.kind, alert.level, Stage.ACKNOWLEDGED, Audience.ALL, alert.detail)
                 )
@@ -222,7 +227,8 @@ class AlertManager:
                 alert.escalated = True
                 self._push(alert, Stage.ESCALATE, now)
             wants_local = alert.level is AlertLevel.CRITICAL or alert.kind in LOCAL_WARNING_KINDS
-            local_due = self.local_immediately or age >= self.times.local_after_s
+            waited = now - (alert.unanswered_since if alert.unanswered_since is not None else now)
+            local_due = self.local_immediately or waited >= self.times.local_after_s
             if wants_local and local_due and not alert.local_fired:
                 alert.local_fired = True
                 self._out.append(Notification(alert.kind, alert.level, Stage.LOCAL, Audience.ALL, alert.detail))
@@ -235,6 +241,8 @@ class AlertManager:
         audience = Audience.ALL if to_all else Audience.ON_DUTY
         alert.notified = True
         alert.last_push = now
+        if alert.unanswered_since is None:
+            alert.unanswered_since = now
         self._out.append(Notification(alert.kind, alert.level, stage, audience, alert.detail))
 
     # -- persistence -----------------------------------------------------
@@ -256,6 +264,7 @@ class AlertManager:
                     "escalated": alert.escalated,
                     "local_fired": alert.local_fired,
                     "shadow": alert.shadow,
+                    "unanswered_since": alert.unanswered_since,
                 }
                 for alert in self.active.values()
             ],
@@ -283,6 +292,7 @@ class AlertManager:
                     escalated=bool(item.get("escalated", False)),
                     local_fired=bool(item.get("local_fired", False)),
                     shadow=bool(item.get("shadow", False)),
+                    unanswered_since=None if item.get("unanswered_since") is None else float(item["unanswered_since"]),
                 )
             except (KeyError, TypeError, ValueError):
                 continue

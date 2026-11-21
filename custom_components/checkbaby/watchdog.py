@@ -15,6 +15,7 @@ class _Source:
     last_seen: float | None = None
     healthy: bool | None = None
     core: bool = False
+    minor: bool = False
 
 
 class Watchdog:
@@ -26,14 +27,22 @@ class Watchdog:
         self._grace_s = grace_s
         self._sources: dict[str, _Source] = {}
 
-    def expect(self, name: str, *, max_age_s: float | None = None, core: bool = False) -> None:
-        """Declare a source. With max_age_s it must report regularly."""
+    def expect(
+        self, name: str, *, max_age_s: float | None = None, core: bool = False, minor: bool = False
+    ) -> None:
+        """Declare a source. With max_age_s it must report regularly.
+
+        A core source decides whether the child's state is known at all. A minor
+        source adds something (a picture, a vital reading); losing it is shown,
+        but it is not worth waking anyone unless an alert depends on it.
+        """
         existing = self._sources.get(name)
         if existing is None:
-            self._sources[name] = _Source(max_age_s=max_age_s, core=core)
+            self._sources[name] = _Source(max_age_s=max_age_s, core=core, minor=minor)
         else:
             existing.max_age_s = max_age_s
             existing.core = core
+            existing.minor = minor
 
     def forget(self, name: str) -> None:
         """Stop expecting a source."""
@@ -76,6 +85,11 @@ class Watchdog:
     def problems(self, now: float) -> list[str]:
         """Names of all sources that are unhealthy, stale or missing."""
         return sorted(name for name, source in self._sources.items() if self._is_problem(source, now))
+
+    def minor(self, name: str) -> bool:
+        """True if losing this source is a hint, not a warning."""
+        source = self._sources.get(name)
+        return source is not None and source.minor
 
     def usable(self, now: float) -> bool:
         """False when a core source is a problem: the child's state is unknown then."""

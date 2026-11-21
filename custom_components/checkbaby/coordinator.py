@@ -258,9 +258,9 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
                 async_track_state_change_event(self.hass, watched, self._handle_entity_event)
             )
         if place.camera_entity:
-            watchdog.expect(SOURCE_CAMERA)
+            watchdog.expect(SOURCE_CAMERA, minor=True)
         if place.breath_rate_entity:
-            watchdog.expect(SOURCE_VITAL_SENSOR)
+            watchdog.expect(SOURCE_VITAL_SENSOR, minor=True)
         if not place.frigate_camera:
             if place.level_entity:
                 watchdog.expect(SOURCE_AUDIO, core=True)
@@ -275,7 +275,7 @@ class CheckBabyCoordinator(DataUpdateCoordinator[Snapshot]):
             watchdog.expect(SOURCE_FRIGATE, core=True)
             watchdog.expect(SOURCE_AUDIO, max_age_s=60.0, core=True)
         if place.engine_id:
-            watchdog.expect(SOURCE_ENGINE, max_age_s=30.0)
+            watchdog.expect(SOURCE_ENGINE, max_age_s=30.0, minor=True)
         if not self._mqtt_available():
             return
         from homeassistant.components import mqtt  # noqa: PLC0415 - only needed with MQTT sources

@@ -168,6 +168,14 @@ def test_crying_alert_ends_after_a_minute_of_quiet() -> None:
     assert night.monitor.state is ChildState.AWAKE
 
 
+def test_state_says_crying_no_later_than_the_warning() -> None:
+    night = Night(cry_warning_s=5.0)
+    night.cry()
+    night.advance(5)
+    assert len(night.pushes(AlertKind.CRYING)) == 1
+    assert night.monitor.state is ChildState.CRYING
+
+
 def test_scream_counts_as_distress() -> None:
     night = Night()
     night.monitor.signals.scream.set(True, night.now)
@@ -270,6 +278,24 @@ def test_source_that_never_reports_is_a_problem_after_the_grace_period() -> None
     night.advance(2)
     assert night.monitor.problems == ["frigate"]
     assert night.monitor.state is ChildState.UNKNOWN
+
+
+def test_lost_vital_source_is_a_hint_until_an_alert_depends_on_it() -> None:
+    night = Night()
+    night.advance(130)
+    night.monitor.watchdog.set_healthy("vital_sensor", False, night.now)
+    night.advance(400)
+
+    assert night.monitor.problems == ["vital_sensor"]
+    assert night.monitor.alerts.active[AlertKind.MONITORING_FAILURE].level is AlertLevel.INFO
+    assert night.sent == []
+    assert night.monitor.state is ChildState.ASLEEP  # the child's state is still known
+
+    night.monitor.settings.breathing_alert = True
+    night.advance(2)
+    assert [n.level for n in night.pushes(AlertKind.MONITORING_FAILURE)] == [AlertLevel.WARNING]
+    night.advance(300)
+    assert night.monitor.alerts.active[AlertKind.MONITORING_FAILURE].level is AlertLevel.CRITICAL
 
 
 def test_dead_microphone_is_reported() -> None:

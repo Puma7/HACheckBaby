@@ -26,13 +26,23 @@ class Flag:
     active: bool = False
     since: float = 0.0
     updated: float | None = None
+    ever_active: bool = False
 
     def set(self, active: bool, now: float) -> None:
         """Record the value; `since` only moves when the value changes."""
         if self.updated is None or active != self.active:
             self.since = now
         self.active = active
+        self.ever_active = self.ever_active or active
         self.updated = now
+
+    def recently_active(self, now: float, within_s: float) -> bool:
+        """True if the flag is on, or went off less than `within_s` ago.
+
+        A flag that was only ever reported as off did not just go off: without
+        this, every start would look like a door that has just been closed.
+        """
+        return self.active or (self.ever_active and self.inactive_for(now) < within_s)
 
     def active_for(self, now: float) -> float:
         """Seconds the flag has been on, 0 if it is off."""
@@ -168,11 +178,8 @@ class Signals:
 
     def caregiver_present(self, now: float) -> bool:
         """Someone is with the child: door open (or just closed) or a person seen."""
-        if self.door_open.active or self.person.active:
-            return True
-        return (
-            self.door_open.inactive_for(now) < CAREGIVER_LINGER_S
-            or self.person.inactive_for(now) < CAREGIVER_LINGER_S
+        return self.door_open.recently_active(now, CAREGIVER_LINGER_S) or self.person.recently_active(
+            now, CAREGIVER_LINGER_S
         )
 
     def distress(self, cry_confirm_s: float, scream_confirm_s: float, now: float) -> bool:

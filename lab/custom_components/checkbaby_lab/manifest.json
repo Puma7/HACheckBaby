@@ -1,0 +1,13 @@
+{
+  "domain": "checkbaby_lab",
+  "name": "CheckBaby Lab",
+  "after_dependencies": ["ai_task", "camera"],
+  "codeowners": ["@Puma7"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/Puma7/HACheckBaby/tree/main/lab",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "requirements": [],
+  "version": "0.1.0"
+}

@@ -7,7 +7,7 @@ No Home Assistant imports and no clock of its own: every method takes `now`
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from .ai_policy import MIN_CONFIDENCE, evaluate_assessment, needs_recheck
@@ -27,6 +27,8 @@ from .watchdog import Watchdog
 RECHECK_AFTER_S = 15.0
 MAX_EVENTS = 300
 MICROPHONE = "microphone"
+# Watchdog names of the sources behind the breathing-movement hint.
+VITAL_SOURCES = frozenset({"engine", "vital_sensor"})
 
 
 @dataclass(frozen=True)
@@ -140,13 +142,16 @@ class Monitor:
             self._log("problems", now, problems=list(problems))
         self.problems = problems
 
+        # The state must not lag behind the warning: with a short warning delay
+        # the phone would say "crying" while the state still says "asleep".
+        confirm = min(self._state_times.cry_confirm_s, settings.cry_warning_delay())
         new_state = next_state(
             self.state,
             self.state_since,
             self.signals,
             usable=self.watchdog.usable(now) and not settings.privacy,
             now=now,
-            times=self._state_times,
+            times=replace(self._state_times, cry_confirm_s=confirm),
         )
         if new_state is not self.state:
             self._enter(new_state, now)
@@ -164,6 +169,7 @@ class Monitor:
                 alerts=self.alerts,
                 durations=self.durations,
                 problems=self.problems,
+                minor_problems=self._minor_problems(),
                 left_unattended=self.left_unattended,
                 now=now,
             )
@@ -203,6 +209,17 @@ class Monitor:
                 self._ai_request = "routine"
         else:
             self._ai_request = None
+
+    def _minor_problems(self) -> frozenset[str]:
+        """Problems that are shown but do not notify.
+
+        A lost vital source counts fully once the breathing-movement alert is
+        switched on: then an alert depends on it.
+        """
+        minor = {name for name in self.problems if self.watchdog.minor(name)}
+        if self.settings.breathing_alert:
+            minor -= VITAL_SOURCES
+        return frozenset(minor)
 
     def _enter(self, new_state: ChildState, now: float) -> None:
         previous = self.state

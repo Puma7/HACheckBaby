@@ -71,6 +71,8 @@ class RuleContext:
     alerts: AlertManager
     durations: Durations
     problems: list[str]
+    # Problems that are only a hint: a lost picture, or a vital source nobody alerts on.
+    minor_problems: frozenset[str]
     left_unattended: bool
     now: float
 
@@ -114,9 +116,12 @@ def evaluate(ctx: RuleContext) -> list[Desired]:
         ctx.durations.held("climate", False, now)
         return desired
 
-    failure_for = ctx.durations.held("failure", bool(ctx.problems), now)
+    serious = [name for name in ctx.problems if name not in ctx.minor_problems]
+    failure_for = ctx.durations.held("failure", bool(serious), now)
     if ctx.problems:
-        level = AlertLevel.CRITICAL if failure_for >= FAILURE_CRITICAL_S else AlertLevel.WARNING
+        level = AlertLevel.INFO
+        if serious:
+            level = AlertLevel.CRITICAL if failure_for >= FAILURE_CRITICAL_S else AlertLevel.WARNING
         desired.append(Desired(AlertKind.MONITORING_FAILURE, level, {"problems": list(ctx.problems)}))
 
     if signals.internet is False:

@@ -249,6 +249,10 @@ def test_microphone_flat_needs_fresh_but_unchanging_levels() -> None:
 def test_caregiver_lingers_after_the_door_closes() -> None:
     signals = Signals()
     assert signals.caregiver_present(0.0) is False
+    # A door that is reported closed at start has not just been closed.
+    signals.door_open.set(False, 5.0)
+    signals.person.set(False, 5.0)
+    assert signals.caregiver_present(6.0) is False
     signals.door_open.set(True, 10.0)
     assert signals.caregiver_present(11.0) is True
     signals.door_open.set(False, 20.0)
@@ -365,6 +369,9 @@ def test_watchdog_health_freshness_and_grace() -> None:
     dog.set_healthy("frigate", True, 131.0)
     assert dog.problems(161.0) == ["level", "radar"]
 
+    assert (dog.minor("radar"), dog.minor("level"), dog.minor("nothing")) == (False, False, False)
+    dog.expect("radar", max_age_s=30.0, minor=True)
+    assert dog.minor("radar") is True
     dog.forget("radar")
     dog.expect("level", max_age_s=600.0, core=True)
     assert dog.problems(161.0) == []

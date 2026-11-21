@@ -1,0 +1,13 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "The lab is already set up."
+    }
+  },
+  "services": {
+    "set": {"name": "Set simulated values", "description": "Sets values of the simulated sensors, for example breath_rate, temperature, door, presence, smoke, internet."},
+    "ai": {"name": "Script the AI", "description": "Sets what the simulated AI answers: mode answer with optional fields, error, or slow."},
+    "tap": {"name": "Tap a notification button", "description": "Acts like a parent tapping Seen or Quiet on the notification."},
+    "reset": {"name": "Reset the recordings", "description": "Forgets the recorded pushes, AI calls and siren switches."}
+  }
+}

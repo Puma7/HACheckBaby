@@ -20,6 +20,8 @@ class Night:
         self.profile = profile
         self.monitor = Monitor(Settings(armed=armed, **settings), self.now)  # type: ignore[arg-type]
         self.monitor.watchdog.expect(AUDIO, max_age_s=60.0, core=True)
+        self.monitor.watchdog.expect("vital_sensor", minor=True)
+        self.monitor.watchdog.set_healthy("vital_sensor", True, self.now)
         self.sent: list[Notification] = []
         self.audio_alive = True
         self.level_db = -50.0

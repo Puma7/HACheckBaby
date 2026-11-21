@@ -676,6 +676,33 @@ async def test_radar_that_stops_reporting_is_a_problem_not_continued_breathing(
     assert state_of(hass, entry, "binary_sensor", "breathing_movement") == "on"
 
 
+async def test_lost_camera_picture_is_shown_but_wakes_nobody(
+    hass: HomeAssistant,
+    mqtt_mock: MqttMockHAClient,
+    config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    pushes: Pushes,
+) -> None:
+    await _start(hass, config_entry, freezer)
+    hass.states.async_set("camera.nursery", "unavailable")
+    await _sound(hass, freezer, 400)
+
+    assert config_entry.runtime_data.coordinator.monitor.problems == ["camera"]
+    assert state_of(hass, config_entry, "binary_sensor", "monitoring_problem") == "on"
+    assert state_of(hass, config_entry, "sensor", "alert_level") == "info"
+    assert state_of(hass, config_entry, "sensor", "state") == "asleep"
+    assert _real(pushes[PARENT_A]) == []
+
+
+async def test_door_closed_at_start_is_not_someone_with_the_child(
+    hass: HomeAssistant, mqtt_mock: MqttMockHAClient, freezer: FrozenDateTimeFactory, pushes: Pushes
+) -> None:
+    entry = make_entry(place={CONF_FRIGATE_CAMERA: CAMERA, CONF_DOOR_ENTITY: "binary_sensor.door"})
+    hass.states.async_set("binary_sensor.door", "off")
+    await _start(hass, entry, freezer)
+    assert state_of(hass, entry, "sensor", "state") == "asleep"
+
+
 async def test_issues_for_missing_mqtt_targets_and_places(hass: HomeAssistant) -> None:
     entry = make_entry(options={}, places=[])
     await setup(hass, entry)
