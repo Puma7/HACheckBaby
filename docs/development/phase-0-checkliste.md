@@ -119,3 +119,27 @@ Ziel: Was liefern MR60BHA2 und FP2 wirklich?
 - [ ] Wie verhält er sich bei leerem Bett und bei Bewegung?
 - [ ] FP2: Präsenz-Zone „Bett" lokal über HomeKit einbinden. Vitaldaten über das SleepRadar-Add-on: Verzögerung, Verhalten ohne Internet.
 - [ ] Beide Sensoren gleichzeitig am selben Bett: ändern sich die Werte?
+
+## 5. CheckBaby selbst am echten System
+
+Ziel: Stimmt, was bisher nur in automatischen Tests lief? Am besten mit einer Puppe und einer Weinaufnahme, lange vor der Geburt.
+
+1. In HACS `https://github.com/Puma7/HACheckBaby` als benutzerdefiniertes Repository (Typ „Integration") hinzufügen, CheckBaby installieren, Home Assistant neu starten.
+2. Integration hinzufügen: Name, errechneter Termin, Schlafplatz mit dem Namen der Frigate-Kamera und der Kamera-Entität, deine Handys.
+3. In der Companion-App kritische Mitteilungen erlauben (iOS: beim ersten kritischen Alarm fragt das System; Android: Kanal „alarm_stream" darf „Nicht stören" umgehen).
+4. Schalter „Überwachung" einschalten.
+
+Prüfen und notieren:
+
+- [ ] **Testalarm** (Knopf „Testalarm"): Kommt er auf allen Handys an, auch stumm geschaltet und mit „Nicht stören"? Enthält er ein Kamerabild? Funktionieren „Gesehen" und „5 min Ruhe"?
+- [ ] **Lokaler Alarm:** Testalarm eine Minute nicht quittieren. Geht Sirene oder Licht an und nach „Gesehen" wieder aus?
+- [ ] **Weinen:** Aufnahme abspielen. Zeit bis zur Warnung (Soll: eingestellte 15 s plus Frigate-Verzögerung)? Wird nach drei Minuten ohne Reaktion kritisch?
+- [ ] **Zustand:** Zeigt der Sensor „Zustand" bei Ruhe „Schläft", bei Bewegung „Unruhig"? Wie oft springt er in einer ruhigen Stunde fälschlich um?
+- [ ] **Grundpegel:** Weißes Rauschen einschalten. Gilt es nach etwa fünf bis zehn Minuten nicht mehr als „laut"?
+- [ ] **Ausfall:** Kamera vom Strom nehmen. Nach wie vielen Sekunden kommt „Überwachung gestört"? Frigate stoppen: dasselbe.
+- [ ] **Neustart:** Home Assistant neu starten, während die Überwachung scharf ist. Kommt vorher die Meldung „wird beendet" und nachher „war unterbrochen"?
+- [ ] **Internet weg:** Router vom Internet trennen (mit eingerichtetem Sensor für die Internetverbindung). Löst der lokale Alarm sofort aus?
+- [ ] **KI:** In den Optionen eine KI-Aufgabe wählen und zustimmen, Schalter „KI-Bewertung" ein, Knopf „KI-Check jetzt". Erscheinen Bewertung und Lage? Mit Puppe in Bauchlage: Warnung, 15 Sekunden später kritisch?
+- [ ] **Diagnose:** Bei jedem unerwarteten Verhalten die Diagnose des Eintrags herunterladen. Sie enthält das Ereignisprotokoll mit dem Grund jeder Entscheidung und keine Daten des Kindes.
+
+Wenn ein Punkt nicht wie beschrieben funktioniert, sind MQTT-Thema, Nutzlast oder Fehlermeldung aus dem Home-Assistant-Protokoll die wichtigste Information für die Korrektur.
