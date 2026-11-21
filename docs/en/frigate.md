@@ -8,7 +8,7 @@ The MQTT topics below are the ones in the code. They follow the Frigate document
 
 ## What CheckBaby reads
 
-`<prefix>` is the Frigate MQTT topic prefix. The default is `frigate`; if you changed `topic_prefix` in Frigate, enter the same value in the CheckBaby options under **Frigate MQTT topic prefix**. `<camera>` is the **Frigate camera name** of the active sleep place, `<zone>` its **Frigate zone of the bed**.
+`<prefix>` is the Frigate MQTT topic prefix. The default is `frigate`; if you changed `topic_prefix` in Frigate, enter the same value in CheckBaby under **Configure → Other devices and settings → Frigate MQTT topic prefix**. `<camera>` is the **Frigate camera name** of the active sleep place, `<zone>` its **Frigate zone of the bed**.
 
 | Topic | Expected payload | What CheckBaby does with it |
 |---|---|---|

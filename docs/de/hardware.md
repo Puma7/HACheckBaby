@@ -50,7 +50,7 @@ Pflicht ist nur die Kamera. Alles andere bringt eine Funktion dazu.
 | Temperatur- und Feuchtesensor | Anzeige des Raumklimas, Alarm für den Temperaturbereich, Schlafsack-Empfehlung |
 | Seeed MR60BHA2 | Lokale Radarquelle für den Atembewegungs-Hinweis, siehe [Vitalquellen](vital-sources.md) |
 | Aqara FP2 | Lokaler Präsenzsensor für das Bett; seine Vitaldaten nur über die Cloud |
-| ESP32 mit Summer | Dead-Man-Warnung, wenn Home Assistant ausfällt, siehe [`esphome-deadman-buzzer.yaml`](../examples/esphome-deadman-buzzer.yaml) |
+| ESP32 mit Summer | Ausfall-Summer („Dead-Man-Summer"): Er ertönt, wenn Home Assistant verstummt, siehe [`esphome-deadman-buzzer.yaml`](../examples/esphome-deadman-buzzer.yaml) |
 | Rauch- und CO-Melder, die Home Assistant auslesen kann | Werden als kritischer Alarm durchgereicht |
 | Ein Sensor, der anzeigt, ob das Internet erreichbar ist | Lässt den lokalen Alarm sofort auslösen, solange das Internet ausgefallen ist |
 | USV für Server, Switch und Router (optional) | Überbrückt kurze Stromausfälle |

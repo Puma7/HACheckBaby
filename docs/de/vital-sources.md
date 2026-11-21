@@ -110,6 +110,8 @@ Der Schalter **Atembewegungs-Alarm** ist standardmäßig aus.
 
 Schaltest du den Alarm ein, während ein aufgezeichneter Alarm besteht, meldet er sich sofort. Schaltest du ihn aus, während er ertönt, wird die Benachrichtigung entfernt.
 
+Der Schalter entscheidet auch, wie schwer eine ausgefallene Quelle wiegt. Solange er aus ist, wird ein Radarsensor ohne Messwert (`vital_sensor`) oder eine Vital-Engine, die offline ist (`engine`), in der Liste der Störungen und als Hinweis angezeigt, sendet aber keine Benachrichtigung. Solange er an ist, hängt ein Alarm an diesen Quellen: Fällt eine aus, entsteht die Warnung „Überwachung gestört", die nach fünf Minuten kritisch wird.
+
 Ein sinnvoller Umgang mit dem Schattenmodus: mindestens 14 Nächte laufen lassen, jeden Morgen die Diagnose herunterladen oder den Sensor „Alarmstufe" mit seinen Attributen aufzeichnen, und zählen, wie oft die Regel galt, obwohl alles in Ordnung war. Ein Werkzeug zur Auswertung ist noch nicht gebaut.
 
 ### Warum 20 Sekunden die Untergrenze sind

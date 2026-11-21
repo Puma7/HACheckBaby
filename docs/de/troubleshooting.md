@@ -9,7 +9,7 @@ Fang an zwei Stellen an:
 
 Bei allem Unerwarteten hilft **Diagnose herunterladen** am CheckBaby-Eintrag. Die Datei enthält das Ereignisprotokoll mit der Ursache jeder Entscheidung.
 
-Weil CheckBaby noch nicht an echter Hardware lief, ist eine Abweichung zu Frigate, zur Home-Assistant-App oder zu einem KI-Anbieter gut möglich. Verhält sich etwas nicht wie hier beschrieben, sind das MQTT-Thema mit Nutzlast oder die Fehlermeldung aus dem Home-Assistant-Protokoll die wichtigsten Angaben für einen Fehlerbericht.
+CheckBaby wurde bisher ein einziges Mal auf einem echten Home Assistant installiert. Zu einem echten Frigate, einer Push-Nachricht auf einem echten Handy, einem echten KI-Anbieter oder einem Radarsensor ist noch nichts bestätigt; eine Abweichung zu jedem davon ist deshalb gut möglich. Verhält sich etwas nicht wie hier beschrieben, sind das MQTT-Thema mit Nutzlast oder die Fehlermeldung aus dem Home-Assistant-Protokoll die wichtigsten Angaben für einen Fehlerbericht.
 
 ## Störungen der Überwachung
 
@@ -25,10 +25,16 @@ Die Namen sind die aus dem Attribut `problems`. In einer Benachrichtigung stehen
 | `camera` | Kamera nicht verfügbar | Die Kamera-Entität existiert nicht oder ist nicht verfügbar. | Prüfe die Kamera-Integration in Home Assistant. Alarme funktionieren weiter; das Bild und die KI-Bewertung nicht. |
 | `engine` | Vital-Engine offline | Die Vital-Engine hat `offline` gemeldet oder seit mehr als 30 Sekunden keinen Zustand gesendet. | Prüfe, ob die Engine läuft, ob sie den Broker erreicht, ob ihre ID zu „ID der Vital-Engine" passt und ob ihr Präfix noch `checkbaby/engine` ist. |
 | `vital_sensor` | Radarsensor nicht verfügbar | Der Atemraten-Sensor hat keinen Zahlenwert, oder er hat sich seit mehr als 120 Sekunden nicht gemeldet. | Prüfe das Radargerät und sein WLAN. Ist das Gerät in Ordnung, meldet der Sensor vermutlich nur bei einer Änderung seines Werts: Lass ihn regelmäßig melden, und entferne Filter, die wiederholte Werte unterdrücken. |
-| `notify` | ein Benachrichtigungsziel fehlt | Der Benachrichtigungsdienst eines eingerichteten Handys existiert nicht, oder es ist weder ein Handy noch ein lokaler Alarm eingerichtet. | Siehe [Es kommt keine Benachrichtigung an](#es-kommt-keine-benachrichtigung-an). |
+| `notify` | ein Benachrichtigungsziel fehlt | Der Benachrichtigungsdienst eines eingerichteten Handys existiert nicht; oder es ist kein Handy eingerichtet und kein Gerät für den lokalen Alarm eingetragen oder erreichbar. | Siehe [Auf dem Handy kommt keine Benachrichtigung an](#auf-dem-handy-kommt-keine-benachrichtigung-an). |
+| `local_alarm` | lokaler Alarm nicht erreichbar | Eine unter „Lokaler Alarm" gewählte Entität fehlt oder ist in Home Assistant `unavailable` (nicht verfügbar), zum Beispiel eine smarte Lampe, die am Wandschalter aus ist. | Gib dem Gerät Strom und prüfe seine Integration. Der Zustellbericht von „Testalarm" nennt das Gerät. Eine Lampe, die als Alarm dient, muss am Wandschalter eingeschaltet bleiben. |
 | `sleep_place` | kein Schlafplatz aktiv | Der Eintrag hat keinen Schlafplatz. | Füge mit „Schlafplatz hinzufügen" einen hinzu. |
 
-Bei eingeschalteter Überwachung löst jede davon die Warnung „Die Überwachung von (Name) ist gestört" aus und nach fünf Minuten einen kritischen Alarm. Bei `mqtt` (wenn eine Frigate-Kamera genutzt wird), `frigate`, `audio_level`, `cry_sensor` oder `sleep_place` zeigt außerdem der Zustand „Unbekannt".
+Die Störungen haben zwei Grade:
+
+- **Leicht:** `camera` und `local_alarm` immer, und `engine` und `vital_sensor`, solange der Schalter „Atembewegungs-Alarm" aus ist. Sie stehen in der Liste, der Binärsensor „Störung der Überwachung" ist an, und die Alarmstufe zeigt „Hinweis"; es wird aber keine Benachrichtigung gesendet, und der Zustand ändert sich nicht.
+- **Ernst:** alle anderen, und `engine` und `vital_sensor`, sobald der Schalter „Atembewegungs-Alarm" an ist. Bei eingeschalteter Überwachung lösen sie die Warnung „Die Überwachung von (Name) ist gestört" aus und nach fünf Minuten einen kritischen Alarm. Bei `mqtt` (wenn eine Frigate-Kamera genutzt wird), `frigate`, `audio_level`, `cry_sensor` oder `sleep_place` zeigt außerdem der Zustand „Unbekannt".
+
+Falls du einen Ausfall-Summer („Dead-Man-Summer") nutzt: Sein Lebenszeichen setzt nur aus, solange eine ernste Störung besteht. Eine leichte Störung lässt den Summer nicht ertönen.
 
 In den ersten zwei Minuten nach einem Start ist eine Quelle, die sich einfach noch nicht gemeldet hat, keine Störung.
 
@@ -36,24 +42,53 @@ In den ersten zwei Minuten nach einem Start ist eine Quelle, die sich einfach no
 
 | Hinweis | Ursache | Was tun |
 |---|---|---|
-| CheckBaby kann für (Name) niemanden alarmieren | Es ist weder ein Handy noch ein lokaler Alarm eingerichtet. | Öffne die Optionen des Eintrags und wähle mindestens eines. |
+| CheckBaby kann für (Name) niemanden alarmieren | Es ist weder ein Handy noch ein lokaler Alarm eingerichtet. | Öffne am Eintrag **Konfigurieren → Wer benachrichtigt wird** und kreuze ein Handy an oder wähle einen lokalen Alarm. |
 | Für (Name) ist kein Schlafplatz eingerichtet | Der Eintrag hat keinen Schlafplatz, zum Beispiel weil du den einzigen gelöscht hast. | Füge am Eintrag mit „Schlafplatz hinzufügen" einen hinzu. |
 | CheckBaby braucht MQTT für (Name) | Der aktive Schlafplatz nutzt eine Frigate-Kamera oder die Vital-Engine, aber die MQTT-Integration ist nicht eingerichtet. | Richte MQTT ein. CheckBaby bemerkt das binnen Sekunden, abonniert seine Themen und entfernt den Hinweis. Bleibt der Hinweis stehen, lade den CheckBaby-Eintrag neu. |
 
-## Es kommt keine Benachrichtigung an
+## Auf dem Handy kommt keine Benachrichtigung an
 
-Geh das der Reihe nach durch.
+Fang mit dem Testalarm an, denn er berichtet, wohin er gegangen ist.
 
-1. **Kommt der Testalarm an?** Drücke „Testalarm". Er funktioniert auch bei ausgeschalteter Überwachung. Kommt er an, ist der Weg zum Handy in Ordnung, und der Grund liegt in den Regeln (weiter bei 5).
-2. **Stimmt der Benachrichtigungsdienst?** In den Optionen muss „Handys" Namen wie `mobile_app_annas_iphone` enthalten, ohne `notify.` davor. Probiere den Dienst unter **Entwicklerwerkzeuge → Aktionen** mit `notify.mobile_app_annas_iphone` aus. Ändert sich der Name des Dienstes, zum Beispiel nachdem du das Handy umbenannt hast, existiert der alte nicht mehr, und die Ausfallüberwachung meldet `notify`.
-3. **Darf die Home-Assistant-App benachrichtigen?** Prüfe in den Einstellungen des Handys die Berechtigung für Mitteilungen und unter Android, dass die Akku-Optimierung die App nicht schlafen legt.
-4. **Hat das Handy eine Verbindung?** Push-Nachrichten brauchen normalerweise das Internet, bei dir und beim Handy.
-5. **Ist die Überwachung an und der Privatmodus aus?** Solange die Überwachung aus oder der Privatmodus an ist, melden sich nur Rauch/CO und der Testalarm.
-6. **Wer hat Dienst?** Eine Warnung geht zuerst nur an das Handy, das unter „Hat Dienst" gewählt ist, und nach drei Minuten an alle.
-7. **Läuft eine Ruhezeit?** Nach „5 min Ruhe" werden Warnungen zurückgehalten.
-8. **War es nur ein Hinweis?** Hinweise (zum Beispiel lose Gegenstände im Bett, ein etwas zu warmer Raum, kein Internet) werden nie gesendet. Sie stehen in den Sensoren „Alarmstufe" und „Alarmgrund".
-9. **Galt jemand als beim Kind?** Solange der Türkontakt offen ist oder die Kamera eine Person sieht und du diese Option eingeschaltet hast, ist der Zustand „Betreut", und kindbezogene Alarme pausieren. Steht der Zustand auf „Betreut", obwohl niemand im Raum ist, erkennt Frigate vermutlich das Kind als Person: Schalte die Option aus.
-10. **Ist dieselbe Warnung gerade erst zu Ende gegangen?** Eine Warnung, die innerhalb von zwei Minuten wiederkommt, wird nicht erneut gesendet.
+### Der Testalarm kommt nicht an
+
+1. **Drücke „Testalarm"** auf der Geräteseite (die Taste steht unter „Diagnose"). Er funktioniert auch bei ausgeschalteter Überwachung.
+2. **Lies den Zustellbericht.** Öffne die Benachrichtigungen von Home Assistant (die Glocke in der Seitenleiste). Neben dem Alarm selbst steht dort ein zweiter Eintrag, der sagt, wohin der Alarm gegangen ist:
+
+   | Im Bericht steht | Was tun |
+   |---|---|
+   | „Es ist kein Handy gewählt, deshalb wurde kein Push gesendet." | Öffne am CheckBaby-Eintrag **Konfigurieren → Wer benachrichtigt wird** und kreuze das Handy unter „Handys" an. |
+   | „NICHT gesendet an: notify.…" | Home Assistant hat diesen Benachrichtigungsdienst nicht mehr, oder der Dienst hat einen Fehler gemeldet. Das passiert zum Beispiel, nachdem ein Handy umbenannt oder die App neu installiert wurde. Öffne **Konfigurieren → Wer benachrichtigt wird**: Ein Ziel, das es nicht mehr gibt, steht weiter in der Liste, mit einem „?" hinter dem Namen. Entferne dort das Häkchen und kreuze das Handy unter seinem jetzigen Namen an. |
+   | „Gesendet an: notify.…" | Home Assistant hat die Nachricht übergeben. Erscheint auf dem Handy nichts, liegt der Grund am Handy oder auf dem Weg dorthin; weiter bei 4. |
+   | „Lokaler Alarm NICHT erreichbar: …" | Siehe `local_alarm` in der Tabelle oben. |
+
+3. **Das Handy steht nicht in der Liste unter „Handys"?** Öffne auf diesem Handy die Home-Assistant-App und melde dich an deinem Home Assistant an. Danach erscheint das Handy mit seinem Gerätenamen in der Liste. Laut der Dokumentation der App kann ein Neustart von Home Assistant nötig sein, bevor ein neues Handy auftaucht.
+4. **Im Bericht steht „Gesendet", aber auf dem Handy erscheint nichts:**
+   - Prüfe in den Einstellungen des Handys, ob die Home-Assistant-App Mitteilungen senden darf.
+   - Erlaube unter iOS zusätzlich kritische Hinweise, siehe [Ein kritischer Alarm ertönt nicht](#ein-kritischer-alarm-ertönt-nicht).
+   - Prüfe unter Android „Nicht stören" und die Akku-Optimierung: Erlaube der App, „Nicht stören" zu umgehen, und nimm sie von der Akku-Optimierung aus, damit das Handy sie nicht schlafen legt.
+   - Prüfe die Verbindung. Eine Push-Nachricht braucht normalerweise das Internet, zu Hause und am Handy.
+5. **Sieh ins Protokoll.** Schalte das Debug-Protokoll ein: **Einstellungen → Geräte & Dienste → CheckBaby**, dann im Menü des Eintrags **Debug-Protokollierung aktivieren**. Oder trage das in `configuration.yaml` ein und starte neu:
+
+   ```yaml
+   logger:
+     logs:
+       custom_components.checkbaby: debug
+   ```
+
+   Drücke noch einmal „Testalarm" und sieh dir das vollständige Protokoll unter **Einstellungen → System → Protokolle** an. Hast du das Menü benutzt, bietet Home Assistant das Protokoll zum Herunterladen an, sobald du die Debug-Protokollierung wieder ausschaltest. Es enthält Zeilen wie `Alert test (critical, first) goes to ['mobile_app_annas_iphone']`, oder `goes to no phone`, wenn keines gewählt ist, und `Local alarm on: [...]`, wenn der lokale Alarm geschaltet wird. Die Zeilen sind englisch. Ein Benachrichtigungsdienst, der gescheitert ist, steht mit seinem Fehler im Protokoll.
+
+### Der Testalarm kommt an, ein echter Alarm aber nicht
+
+Dann ist der Weg zum Handy in Ordnung, und der Grund liegt in den Regeln.
+
+1. **Ist die Überwachung an und der Privatmodus aus?** Solange die Überwachung aus oder der Privatmodus an ist, melden sich nur Rauch/CO und der Testalarm.
+2. **Wer hat Dienst?** Eine Warnung geht zuerst nur an das Handy, das unter „Hat Dienst" gewählt ist, und nach drei Minuten an alle.
+3. **Ist das Handy nur unter „Handys der Babysitter" angekreuzt?** Diese Handys bekommen Alarme nur, solange der Modus auf „Babysitter" steht.
+4. **Läuft eine Ruhezeit?** Nach „5 min Ruhe" werden Warnungen zurückgehalten.
+5. **War es nur ein Hinweis?** Hinweise (zum Beispiel lose Gegenstände im Bett, ein etwas zu warmer Raum, kein Internet) werden nie gesendet. Sie stehen in den Sensoren „Alarmstufe" und „Alarmgrund".
+6. **Galt jemand als beim Kind?** Solange der Türkontakt offen ist oder die Kamera eine Person sieht und du diese Option eingeschaltet hast, ist der Zustand „Betreut", und kindbezogene Alarme pausieren. Steht der Zustand auf „Betreut", obwohl niemand im Raum ist, erkennt Frigate vermutlich das Kind als Person: Schalte die Option aus.
+7. **Ist dieselbe Warnung gerade erst zu Ende gegangen?** Eine Warnung, die auf den Handys war und innerhalb von zwei Minuten wiederkommt, wird nicht erneut gesendet.
 
 Kommt die Benachrichtigung ohne Bild an: Der Schlafplatz braucht eine Kamera-Entität, und das Handy muss dein Home Assistant erreichen können, von unterwegs über die externe Adresse.
 
@@ -89,9 +124,9 @@ Bleibt es weiter stumm, verlass dich auf den lokalen Alarm und dein Rückfall-Ba
    Du solltest `frigate/<kamera>/audio/dBFS` mit wechselnden Zahlen sehen und `frigate/<kamera>/audio/crying`, das auf `ON` wechselt.
 2. **Gar kein `dBFS`:** Der Stream hat keinen Ton, oder die Rolle `audio` fehlt. Siehe [Frigate](frigate.md).
 3. **`dBFS` kommt an, `crying` geht nie auf `ON`:** `crying` fehlt in Frigates Liste `listen` (es gehört nicht zum Standard), oder Frigates Schwellen (`min_volume`, der `threshold` des Labels) sind für deinen Raum zu streng.
-4. **`crying` geht in MQTT auf `ON`, aber der Binärsensor „Weinen" bleibt aus:** Der „Name der Frigate-Kamera" im Schlafplatz oder das MQTT-Präfix in den Optionen passt nicht, oder ein anderer Schlafplatz ist aktiv.
+4. **`crying` geht in MQTT auf `ON`, aber der Binärsensor „Weinen" bleibt aus:** Der „Name der Frigate-Kamera" im Schlafplatz oder das MQTT-Präfix unter **Konfigurieren → Weitere Geräte und Einstellungen** passt nicht, oder ein anderer Schlafplatz ist aktiv.
 5. **Der Binärsensor „Weinen" geht an, aber es kommt keine Warnung:** Das Weinen muss ununterbrochen andauern. Prüfe „Weinen bis zur Warnung" und „Empfindlichkeit". Schaltet Frigate `crying` alle paar Sekunden aus und wieder ein, beginnt die Zählung jedes Mal neu; sieh dir Frigates `max_not_heard` an.
-6. **Prüfe danach die Liste unter [Es kommt keine Benachrichtigung an](#es-kommt-keine-benachrichtigung-an).**
+6. **Prüfe danach die Liste unter [Auf dem Handy kommt keine Benachrichtigung an](#auf-dem-handy-kommt-keine-benachrichtigung-an).**
 
 Hat ein Schlafplatz sowohl den Namen einer Frigate-Kamera als auch einen Wein-Sensor, wird nur Frigate verwendet und der Wein-Sensor ignoriert. Um den Wein-Sensor zu nutzen, leere den Namen der Frigate-Kamera.
 
@@ -101,12 +136,13 @@ Hat ein Schlafplatz sowohl den Namen einer Frigate-Kamera als auch einen Wein-Se
 
 ## Die KI-Bewertung tut nichts
 
-- Der Schalter „KI-Bewertung" ist standardmäßig aus.
-- Die Optionen brauchen mindestens eine KI-Aufgabe **und** das Häkchen für die Einwilligung.
+- **Drücke „KI-Check jetzt"** auf der Geräteseite und lies das Ergebnis in den Benachrichtigungen von Home Assistant (die Glocke in der Seitenleiste). Dort steht das Urteil der KI oder der Grund, warum kein Check lief: keine KI-Aufgabe gewählt, das Senden von Bildern nicht bestätigt, Privatmodus an, der Schlafplatz hat keine Kamera-Entität, es läuft schon ein Check, oder die KI hat keine brauchbare Antwort gegeben (mit der Fehlermeldung des Anbieters).
+- Es braucht ein KI-Modell **und** das Häkchen für die Einwilligung, aus der Einrichtung oder unter **Konfigurieren → KI-Bewertung**. Die Liste unter „KI-Modell (eine „KI-Aufgabe" von Home Assistant)" ist leer, bis eine KI-Integration zu Home Assistant hinzugefügt wurde (Google Gemini, OpenRouter, Ollama); siehe [KI-Bewertung](ai-assessment.md#was-eine-ki-aufgabe-ist-und-woher-sie-kommt).
+- Der Schalter „KI-Bewertung" ist standardmäßig an. Hat ihn jemand ausgeschaltet, pausieren die automatischen Bewertungen.
 - Der Schlafplatz braucht eine Kamera-Entität.
 - Automatische Bewertungen laufen nur, solange die Überwachung an, der Privatmodus aus und niemand beim Kind ist.
 - Der Sensor „KI-Aufrufe in der letzten Stunde" zeigt, ob das Budget verbraucht ist.
-- Ist „KI-Bewertung verfügbar" aus, ist der letzte Versuch gescheitert: Jede KI-Aufgabe hat nach 20 Sekunden die Zeit überschritten, einen Fehler geliefert oder eine Antwort ohne die Pflichtfelder gegeben. Das Ereignisprotokoll in der Diagnose nennt den Fehler. Manche Anbieter nehmen über AI Task möglicherweise kein Kamerabild an; das wurde noch nicht ausprobiert.
+- Ist „KI-Bewertung verfügbar" aus, ist der letzte Versuch gescheitert: Jede KI-Aufgabe hat nach 20 Sekunden die Zeit überschritten, einen Fehler geliefert oder eine Antwort ohne die Pflichtfelder gegeben. Das Ergebnis von „KI-Check jetzt" und das Ereignisprotokoll in der Diagnose nennen den Fehler. Manche Anbieter nehmen über AI Task möglicherweise kein Kamerabild an; das wurde noch nicht ausprobiert.
 
 ## „Atembewegung" bleibt unbekannt
 

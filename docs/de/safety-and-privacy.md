@@ -9,10 +9,10 @@ CheckBaby ist ein Aufmerksamkeits- und Komfortsystem für Eltern. Es sagt dir, w
 **CheckBaby ist kein Medizinprodukt.** Es stellt keine Diagnose und garantiert keine Erkennung.
 
 - **Es kann den plötzlichen Kindstod nicht verhindern.** Für kein Überwachungsgerät ist das belegt. Die American Academy of Pediatrics rät in ihrer Empfehlung von 2022 davon ab, Heimmonitore als Strategie zur Senkung dieses Risikos einzusetzen. Sie zu nutzen ist nicht schädlich, ersetzt aber nicht die Maßnahmen, die nachweislich helfen.
-- **Es kann ohne Vorwarnung ausfallen.** Es hängt an einer Kamera, am WLAN, an Frigate, an einem MQTT-Broker, an Home Assistant, an deinem Handy und meist am Internet. Die Ausfallüberwachung meldet viele Ausfälle, aber nicht den Ausfall von Home Assistant selbst, solange du den Dead-Man-Summer nicht baust, und kein ausgeschaltetes Handy.
+- **Es kann ohne Vorwarnung ausfallen.** Es hängt an einer Kamera, am WLAN, an Frigate, an einem MQTT-Broker, an Home Assistant, an deinem Handy und meist am Internet. Die Ausfallüberwachung meldet viele Ausfälle, aber nicht den Ausfall von Home Assistant selbst, solange du keinen Ausfall-Summer („Dead-Man-Summer") baust, und kein ausgeschaltetes Handy.
 - **Es kann sich in beide Richtungen irren.** Weinen kann unerkannt bleiben, und Alarme können falsch sein. Die KI-Bewertung kann ein Bild überzeugend und falsch beschreiben.
 - **Der Atembewegungs-Hinweis ist an Säuglingen nicht validiert** und standardmäßig ausgeschaltet. Siehe [Vitalquellen](vital-sources.md).
-- **Es lief noch nicht an echter Hardware.** Die Integration ist durch automatische Tests abgedeckt; die Prüfungen mit echter Kamera, echtem Handy und echtem Sensor stehen noch aus.
+- **Es lief bisher kaum an echter Hardware.** Die Integration ist durch automatische Tests und durch ein Labor mit einem echten Home Assistant und simulierten Geräten abgedeckt. Eine erste Installation auf einem echten Home Assistant hat stattgefunden; noch nicht bestätigt ist, dass eine Push-Nachricht auf einem echten Handy ankommt, und die Prüfungen mit echter Kamera, echtem Frigate, echtem KI-Anbieter und echtem Sensor stehen noch aus.
 
 Was daraus für dich folgt:
 
@@ -53,6 +53,7 @@ Alles wird bei dir zu Hause verarbeitet, mit einer Ausnahme, die du selbst einsc
 | Einstellungen, aktive Alarme, Schlafprotokoll, gelernter Grundpegel | In einer Datei im Speicherordner von Home Assistant. Wird gelöscht, wenn du den Eintrag entfernst. |
 | Ereignisprotokoll (die letzten 300 Entscheidungen mit ihrer Ursache) | Nur im Arbeitsspeicher; bei einem Neustart verloren. Im Diagnose-Download enthalten. |
 | Bilder für die KI-Bewertung | Werden von CheckBaby nicht gespeichert. Werden an die KI-Aufgabe gesendet, die du gewählt hast. |
+| Alarme und Ergebnisse in den Benachrichtigungen von Home Assistant (die Glocke in der Seitenleiste) | In Home Assistant, sichtbar für alle, die dort angemeldet sind. Nur Text, kein Bild; das Ergebnis eines KI-Checks enthält den Satz der KI. Der Eintrag eines Alarms verschwindet, wenn der Alarm endet oder beantwortet wird; Ergebnisse und der Zustellbericht eines Testalarms bleiben, bis du sie wegklickst oder ein neuerer Eintrag sie ersetzt. |
 
 Den Verlauf der Sensoren bewahrt der Recorder von Home Assistant auf wie bei jeder anderen Entität.
 
@@ -75,7 +76,7 @@ Push-Nachrichten laufen normalerweise über die Server von Apple oder Google.
 
 ### Cloud-KI braucht deine Einwilligung
 
-Bei einem Cloud-Anbieter verlässt mit jeder Bewertung ein Bild deines Kindes und seines Bettes dein Zuhause. CheckBaby sendet kein Bild, bevor du in den Optionen „Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden" angekreuzt hast. Je nach Tarif kann ein Anbieter Bilder zum Training verwenden; lies seine Bedingungen. Ein lokales Modell behält die Bilder im Haus. Einzelheiten stehen unter [KI-Bewertung](ai-assessment.md#datenschutz-und-einwilligung).
+Bei einem Cloud-Anbieter verlässt mit jeder Bewertung ein Bild deines Kindes und seines Bettes dein Zuhause. CheckBaby sendet kein Bild, bevor du eine KI-Aufgabe gewählt und „Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden" angekreuzt hast, in der Einrichtung oder in den Optionen. Je nach Tarif kann ein Anbieter Bilder zum Training verwenden; lies seine Bedingungen. Ein lokales Modell behält die Bilder im Haus. Einzelheiten stehen unter [KI-Bewertung](ai-assessment.md#datenschutz-und-einwilligung).
 
 ### Eine Kamera im eigenen Schlafzimmer
 

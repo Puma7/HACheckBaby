@@ -27,7 +27,7 @@ The rules are checked in this order:
 1. **Unknown** if a core source has a problem (see [the watchdog](#the-watchdog)) or privacy mode is on. A missing signal is never shown as "Asleep".
 2. **Attended** while the door contact is open or the camera sees a person (if you turned that option on), and for 20 seconds after the door closed or the person left.
 3. **Not in bed** while the presence sensor is off.
-4. **Crying** once crying has been heard without a break for 8 seconds, or screaming for 3 seconds. The state stays "Crying" until neither has been heard for 60 seconds; then it becomes "Awake".
+4. **Crying** once crying has been heard without a break for 8 seconds, or screaming for 3 seconds. If the crying time before a warning is shorter than 8 seconds (through "Sensitivity" or babysitter mode), the state follows that shorter time, so that it never lags behind the warning. The state stays "Crying" until neither has been heard for 60 seconds; then it becomes "Awake".
 5. Otherwise the state moves like this:
 
 | From | To | When |
@@ -56,7 +56,7 @@ With the actions `checkbaby.start_sleep` and `checkbaby.end_sleep` you can set t
 | Pet in bed | Warning | Frigate sees a cat or dog in the bed zone. |
 | Room climate | Hint or warning | The room temperature has been outside the range you set for 10 minutes. A warning if it is off by more than 3 °C, otherwise a hint. Humidity is displayed only. |
 | Smoke or CO | Critical | One of the configured detectors is on. Passed through even while Monitoring is off or privacy mode is on. |
-| Monitoring failure | Warning, then critical | At least one monitoring problem exists. Critical after 5 minutes. |
+| Monitoring failure | Hint, or warning, then critical | At least one monitoring problem exists. A minor problem is a hint. Any other problem is a warning and becomes critical after 5 minutes. See [the watchdog](#the-watchdog). |
 | No internet | Hint | The internet connectivity sensor is off. |
 | Monitoring was interrupted | Warning | After a start: Monitoring was on and CheckBaby was not running for two minutes or longer. |
 | Test alert | Critical (or warning) | You pressed "Test alert". |
@@ -79,13 +79,13 @@ Nothing is sent. The alert shows in the two sensors and in the event log of the 
 2. **After 60 seconds without a reaction**, for crying and "left the bed" only: the local alarm is switched on. While the internet connectivity sensor is off, this happens at once.
 3. **After 180 seconds without a reaction:** the notification is sent once more, now to all phones.
 
-If the same warning ends and comes back within 120 seconds, it becomes active again without a new notification. This keeps a signal that flickers from buzzing your phone every few seconds.
+If the same warning ends and comes back within 120 seconds, it becomes active again without a new notification. This keeps a signal that flickers from buzzing your phone every few seconds. The rule only looks at a warning that was actually on the phones: a hint that ends, an alert that was only recorded, or a warning that was held back by "Quiet for 5 min" does not hold back the first notification of the next warning.
 
 ### Critical
 
 1. **At once:** a notification to all phones, whoever is on duty. On iOS it is sent as a critical alert at full volume, on Android on the channel `alarm_stream`, so that it sounds through silent mode and Do Not Disturb. This needs a permission on the phone, see [Troubleshooting](troubleshooting.md#a-critical-alert-does-not-sound).
 2. **Every 30 seconds:** the notification is repeated until someone acknowledges it or the cause ends.
-3. **After 60 seconds without a reaction:** the local alarm is switched on (at once while the internet is down).
+3. **Local alarm:** switched on once a notification of this alert has gone unanswered for 60 seconds (at once while the internet is down). The minute counts from the first unanswered notification, also if that one was still a warning. An alert that turns critical after its warning was ignored for a minute or more therefore switches the local alarm on together with the step to critical.
 
 Critical alerts are never held back by snooze or by the 120-second rule.
 
@@ -107,11 +107,48 @@ With the default settings, counted from the moment Frigate reports crying:
 
 The repeat to all phones after 180 seconds coincides with the step to critical here, so you see one notification, not two.
 
+## Where an alert arrives
+
+A warning or a critical alert can take three paths: the phone, the notifications of Home Assistant itself, and the local alarm. A hint takes none of them; it only shows in the sensors.
+
+### The phone is the main alarm
+
+The notification of the Home Assistant companion app is what is meant to wake you. A critical alert is sent so that it sounds although the phone is silent or on Do Not Disturb. The phone has to allow that, see [Troubleshooting](troubleshooting.md#a-critical-alert-does-not-sound).
+
+A notification normally travels from Home Assistant through the servers of Apple or Google to the phone. It therefore needs the internet, at home and on the phone. According to its documentation, the companion app can also receive notifications directly over the home network: on Android with the setting "Persistent connection" in the app's settings, on iOS as "local push" while the phone is on a Wi-Fi network that is listed as internal in the app. This is a feature of the companion app that you switch on there. CheckBaby has not been tried with it.
+
+### Home Assistant's own notifications
+
+Every warning and every critical alert also appears in Home Assistant's own notifications (the bell in the sidebar). So something is always visible without a phone, for example on a tablet on the wall.
+
+- The entry is created when the alert is first sent, and renewed when the alert rises a level.
+- It is removed when the alert ends, when someone taps "Seen", or when the warning is held back with "Quiet for 5 min".
+- A **test alert** writes a second entry, the delivery report. It lists which notify services accepted the message, which could not be reached, which local alarm devices are set and which of them are unreachable, and it says what to check on the phone if nothing showed up there. The report stays after the test is answered. "Accepted" means that Home Assistant handed the message over without an error; whether it showed up on the phone is something only you can see.
+- The results of the buttons "Quick check", "Send night report" and "AI check now" appear there too, see [Entities and actions](entities-and-actions.md#buttons).
+
+These entries make no sound. They are a place to look, not an alarm.
+
+### The local alarm
+
+The field "Local alarm (siren, light, switch)" is for devices that Home Assistant switches itself. It is the path that works with no internet at all, as long as the device is controlled locally and not through its maker's cloud. When it switches on is described under [The three alert levels](#the-three-alert-levels).
+
+The device has to be reachable in Home Assistant. A smart lamp that is switched off at the wall switch stays dark; the watchdog reports that as `local_alarm`, see [the watchdog](#the-watchdog).
+
+### Wall displays and tablets
+
+A wall panel or a tablet that shows a Home Assistant dashboard can show alerts as well:
+
+- **On the dashboard:** a conditional card on the binary sensor "Unanswered alert" is visible only while a warning or critical alert is unanswered. The [example dashboard](../examples/dashboard.yaml) has such a card with the button "Seen".
+- **As a local alarm:** if the panel has a relay, a light or a siren that Home Assistant can switch (an entity of the type switch, light or siren), you can choose it under "Local alarm".
+- **A tone or a flashing light:** use the event entity "Alert" in an automation of your own, or the blueprint [`alert_light.yaml`](../../blueprints/automation/checkbaby/alert_light.yaml), which gives a light one colour for a warning and another for a critical alert.
+
+None of this has been tried with a particular product. Whether a panel wakes its screen or can play a tone depends on the panel.
+
 ## Acknowledge and snooze
 
 **Seen** (button on the notification, button entity, or action `checkbaby.acknowledge`) acknowledges all active warnings and critical alerts of the child at once.
 
-- The notifications are removed from all phones and the local alarm is switched off.
+- The notifications are removed from all phones and from Home Assistant's notifications, and the local alarm is switched off.
 - Repeats and escalation stop.
 - Monitoring goes on. The alert stays active for as long as its cause lasts. If it gets worse, for example an acknowledged AI warning that becomes critical, it notifies again.
 - An acknowledged crying warning does not become critical.
@@ -119,15 +156,15 @@ The repeat to all phones after 180 seconds coincides with the step to critical h
 
 **Quiet for 5 min** (button on the notification, button entity, or action `checkbaby.snooze` with 1 to 120 minutes) holds warnings back.
 
-- Warnings that are showing are removed from the phones; new warnings are not sent.
+- Warnings that are showing are removed from the phones and from Home Assistant's notifications; new warnings are not sent.
 - A local alarm that is on because of a warning is switched off. The binary sensor "Unanswered alert" stays on, because the warning is still unanswered.
-- When the time is over, warnings that are still active and unanswered are sent again, to the phone on duty. The steps whose time has already passed follow within seconds: the repeat to all phones if the warning is older than 180 seconds, and the local alarm for crying and "left the bed" if it is older than 60 seconds.
+- When the time is over, warnings that are still active and unanswered are sent again, to the phone on duty. If the warning is older than 180 seconds by then, the repeat to all phones follows within seconds. The local alarm for crying and "left the bed" comes on 60 seconds after the warning was sent again, if nobody reacts.
 - **A crying warning does not turn critical during the quiet time.** Snoozing counts as an answer: the 180 seconds of "nobody reacts" start when the quiet time ends. If the child still cries then and nobody acknowledges, the alert becomes critical 180 seconds later.
 - **Other critical alerts come through regardless.** Snooze never holds back an alert that is critical, for example smoke, a monitoring failure that has lasted five minutes, or a crying alert that was already critical. A local alarm that is on because of a critical alert stays on.
 
 ## On duty
 
-The select **On duty** lists "Everyone" and each configured phone. It decides who gets a warning first. Critical alerts, the repeat after 180 seconds, and the removal of notifications always go to all phones. The quick check and the night report, when sent as a notification, also go to whoever is on duty.
+The select **On duty** lists "Everyone" and each configured phone. It decides who gets a warning first. Critical alerts, the repeat after 180 seconds, and the removal of notifications always go to all phones. The results of the quick check, the night report and "AI check now" also go to whoever is on duty.
 
 ## Modes and sensitivity
 
@@ -137,7 +174,7 @@ The select **On duty** lists "Everyone" and each configured phone. It decides wh
 |---|---|
 | Night | The normal case. |
 | Nap | Behaves like "Night". The mode is stored with each sleep in the sleep log. |
-| Babysitter | Every warning goes to all phones at once. The babysitter's phone from the options is added to the phones. The crying time before a warning is halved. |
+| Babysitter | Every warning goes to all phones at once. The phones ticked under "Babysitters' phones" (options page "Who is told") are told in addition to the parents' phones; in the other modes they receive nothing. The crying time before a warning is halved. |
 
 There is no "Off" mode; use the switch **Monitoring**.
 
@@ -157,24 +194,35 @@ A monitor that fails silently is worse than none. Every source that the active s
 | `camera` | Camera entity set | The camera entity is missing or unavailable. |
 | `engine` | Vital engine ID set | The vital engine is offline or silent for more than 30 seconds. |
 | `vital_sensor` | Breathing rate sensor set | The sensor has no numeric value. |
-| `notify` | Always | No alert target at all, or a configured notify service does not exist. |
+| `notify` | Always | A configured notify service does not exist, or nobody could be alerted at all: no phone is configured, and no local alarm device is set or reachable. |
+| `local_alarm` | Local alarm set | A local alarm entity is missing or `unavailable` in Home Assistant, for example a smart lamp that is switched off at the wall switch. |
 | `sleep_place` | Always | No sleep place is active. |
 
-What follows from a problem:
+Every problem is shown: the binary sensor **Monitoring problem** turns on and the sensor **Monitoring problems** lists the names. This also happens while Monitoring is off. What else follows depends on the grade of the problem.
 
-- The binary sensor **Monitoring problem** turns on and the sensor **Monitoring problems** lists the names. This also happens while Monitoring is off.
-- If the problem is in a **core source** (`mqtt` with a Frigate camera, `frigate`, `audio_level`, `cry_sensor`, `sleep_place`), the state becomes "Unknown".
+**Minor problems** cost an extra, not the monitoring itself:
+
+- `camera`: the picture in notifications and the AI assessment are missing. Crying is still detected.
+- `engine` and `vital_sensor`, as long as the switch "Breathing-movement alert" is off: no alert depends on these sources then.
+- `local_alarm`: a local alarm device would stay silent. The phones are still told. If no phone is configured and none of the local alarm devices can be reached, nobody could be alerted; that is reported as `notify`, which is serious.
+
+A minor problem sends no notification and does not change the child's state. While Monitoring is on, the alert level shows "Hint" with the reason "Monitoring failure".
+
+**All other problems are serious.** `engine` and `vital_sensor` also become serious as soon as the switch "Breathing-movement alert" is on, because an alert then depends on them.
+
 - While Monitoring is on: a **warning** "Monitoring failure" with the reasons in the text, and a **critical alert** if the problem lasts 5 minutes.
-- The heartbeat buttons are no longer pressed, so a dead-man buzzer sounds too.
+- If the problem is in a **core source** (`mqtt` with a Frigate camera, `frigate`, `audio_level`, `cry_sensor`, `sleep_place`), the state also becomes "Unknown".
+
+If you use an outage buzzer (see below): its sign of life stops only while a serious problem exists. A minor problem, for example a lost camera picture, does not make the buzzer sound.
 
 After a start and after switching the sleep place there is a grace period of two minutes in which a source that has not reported yet is not a problem. A source that actively reports "offline" or "unavailable" counts at once.
 
 Two more things guard against a silent failure:
 
 - **When Home Assistant shuts down** while Monitoring is on, the phone on duty receives "Home Assistant is stopping. (name) is not monitored until it is back." A warning before an update is planned, but not implemented.
-- **Heartbeat buttons** (option "Dead-man heartbeat buttons"): CheckBaby presses the chosen button entities every 30 seconds while Monitoring is on and there is no problem. A separate device can sound when the presses stop. An example is in [`esphome-deadman-buzzer.yaml`](../examples/esphome-deadman-buzzer.yaml).
+- **An outage buzzer** (also called a dead-man buzzer) is an optional small device of your own that beeps when Home Assistant falls silent: after a crash, or when the power or the Wi-Fi fails. An example with an ESP32 is in [`esphome-deadman-buzzer.yaml`](../examples/esphome-deadman-buzzer.yaml). Such a device needs a regular sign of life. Choose its button under "Sign of life for an outage buzzer (optional)" on the options page "Who is told": CheckBaby presses it every 30 seconds while Monitoring is on and no serious problem exists. When the presses stop, the buzzer sounds. If you have no such device, leave the field empty.
 
-If you configured an internet connectivity sensor, its "off" raises the hint "No internet" and makes the local alarm fire at once instead of after a minute, because the push notifications depend on the internet.
+If you configured an internet connectivity sensor, its "off" raises the hint "No internet" and makes the local alarm fire at once instead of after a minute, because the push notifications normally depend on the internet.
 
 ## The learned noise floor
 
@@ -189,7 +237,7 @@ The noise floor and the margin decide between "Asleep", "Restless" and "Awake" a
 
 ## Audio relay
 
-If you set a speaker in the options, an audio stream address in the sleep place and turn on the switch **Audio relay**, CheckBaby plays the stream on the speaker after two seconds of noise or crying and stops it after 60 seconds of quiet. It works only while Monitoring is on and privacy mode is off. Whether your speaker plays the stream, and with what delay, has to be tried; this is untested.
+If you set a speaker on the options page "Other devices and settings", an audio stream address in the sleep place and turn on the switch **Audio relay**, CheckBaby plays the stream on the speaker after two seconds of noise or crying and stops it after 60 seconds of quiet. It works only while Monitoring is on and privacy mode is off. Whether your speaker plays the stream, and with what delay, has to be tried; this is untested.
 
 ## Privacy mode
 
@@ -198,14 +246,14 @@ The switch **Privacy mode** is meant for moments such as nursing in front of the
 While it is on:
 
 - The state shows "Unknown".
-- No alerts are raised and nothing is sent, with one exception: smoke and CO.
-- No image is sent to an AI task: neither automatically nor with the button "AI check now" or the actions `checkbaby.assess_now` and `checkbaby.quick_check`.
+- No alerts are raised and nothing is sent by itself, with one exception: smoke and CO. A button you press yourself ("Test alert", "Quick check", "Send night report") still shows its result.
+- No image is sent to an AI task: neither automatically nor with the button "AI check now" or the actions `checkbaby.assess_now` and `checkbaby.quick_check`. The button then only reports that privacy mode is on.
 - The audio relay stops. "Quiet time" is off.
 
 What privacy mode does **not** do:
 
 - It does not switch off the camera, Frigate or Frigate's recording. CheckBaby has no control over them.
-- It does not stop the heartbeat for a dead-man buzzer.
+- It does not stop the sign of life for an outage buzzer.
 
 ## What survives a restart
 

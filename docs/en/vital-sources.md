@@ -110,6 +110,8 @@ The switch **Breathing-movement alert** is off by default.
 
 If you switch the alert on while a recorded alert is active, it notifies at once. If you switch it off while it is sounding, the notification is removed.
 
+The switch also decides how much a lost source matters. While it is off, a radar sensor without a reading (`vital_sensor`) or a vital engine that is offline (`engine`) is shown in the list of monitoring problems and as a hint, but sends no notification. While it is on, an alert depends on these sources: losing one raises the warning "Monitoring failure", which becomes critical after five minutes.
+
 A sensible way to use shadow mode: let it run for at least 14 nights, download the diagnostics each morning or record the sensor "Alert level" with its attributes, and count how often the rule held although everything was fine. An evaluation tool for this is not built yet.
 
 ### Why 20 seconds is the floor

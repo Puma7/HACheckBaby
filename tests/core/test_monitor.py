@@ -709,6 +709,17 @@ def test_test_alert_works_while_disarmed_and_ends_on_acknowledgement() -> None:
     assert AlertKind.TEST not in night.monitor.alerts.active
 
 
+def test_a_second_test_alert_right_after_the_first_notifies_again() -> None:
+    night = Night(armed=False)
+    for _ in range(2):
+        night.monitor.test_alert(night.now, AlertLevel.WARNING)
+        night.advance(2)
+        night.monitor.acknowledge(night.now)
+        night.advance(2)
+    # The cooldown that keeps a flapping warning quiet does not apply to a test.
+    assert night.stages(AlertKind.TEST).count(Stage.FIRST) == 2
+
+
 def test_interruption_is_reported_as_a_warning() -> None:
     night = Night()
     night.monitor.report_interruption(240.4, night.now)

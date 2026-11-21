@@ -32,7 +32,8 @@ mqtt:
   user: frigate
   password: CHANGE_ME
   # CheckBaby expects "frigate". If you change it, enter the same value in the
-  # CheckBaby options under "Frigate MQTT topic prefix".
+  # CheckBaby options (Configure -> Other devices and settings) under
+  # "Frigate MQTT topic prefix".
   topic_prefix: frigate
 
 # One connection to the camera, several consumers (Frigate, the live view, the

@@ -8,27 +8,29 @@ A local baby monitor for Home Assistant, built on Frigate and installed through 
 
 ## Status and limits
 
-Version 0.1.0 is unreleased. Read this before you install it.
+Read this before you install it. Version numbers follow the release tags (0.0.1, 0.0.2, …); HACS offers an update when a new release is published.
 
 - The integration is covered by automated tests that run against Home Assistant 2026.2 and 2026.10.
-- **It has not yet run against a real Frigate, camera, phone or radar sensor.** The MQTT topics, the format of the push notifications and the AI call follow the documentation of Frigate, the companion app and Home Assistant. Whether they match your system is what the first evening will show.
+- It also runs in a lab ([lab/README.md](lab/README.md), German): a real Home Assistant with a real MQTT broker, a stand-in for Frigate, simulated phones, sensors and camera, a scripted AI model and the real vital engine process. The lab walks through the setup, the alert chain, failures and restarts in real time.
+- **A first installation on a real Home Assistant has taken place, and little more than that.** It led to the fixes in version 0.0.3: phones are now chosen with tick boxes, because a phone chosen in the earlier search field was not saved, and alerts and results are also shown in Home Assistant's own notifications, so that something is visible without a phone.
+- **There is still no confirmed evidence that a push arrives on a real phone** and sounds through Do Not Disturb. Nothing is known yet about the MQTT topics of a real Frigate, about a real AI provider (Gemini, OpenRouter, Ollama) accepting the camera picture and judging it well, or about a radar sensor. The lab cannot show any of this. Whether it matches your system is what the first evening will show.
 - The vital engine (`engine/`) has been tested with artificial signals only and has never seen a real camera or a real child.
-- All hardware examples (Frigate configuration, ESPHome for the radar and the buzzer, dashboards, blueprints) are untested on real hardware.
+- The hardware examples (Frigate configuration, ESPHome for the radar and the buzzer, blueprints) are untested on real hardware. The English example dashboard was loaded in the lab; the German one was not.
 - The breathing-movement hint is unvalidated on infants and switched off by default. It is a hint, not a medical measurement.
 
 ## What works today
 
-"Works" means: implemented and covered by the automated tests.
+"Works" means: implemented and covered by the automated tests and the lab. What version 0.0.3 adds (ticking the phones, Home Assistant's notifications, the delivery report) is covered by the automated tests.
 
-- **Setup in the user interface:** child, sleep places with their camera and sensors, who is told, intended-use notice. Several sleep places per child, several children.
+- **Setup in the user interface:** five short pages (child, sleep place, who is told, optional AI assessment, intended-use notice), then one switch and one test button. The phones are ticked in a list of the devices that have the companion app; nothing has to be typed. Several sleep places per child, several children.
 - **Sources:** Frigate over MQTT (crying, scream, sound level, motion, person, cat or dog in the bed zone, availability), or plain entities for crying, motion and level. Optional door contact, bed presence, room climate, smoke/CO, internet connectivity.
 - **Child state:** asleep, restless, awake, crying, attended, not in bed, unknown. Changes follow durations, not single events.
-- **Alerts in three levels:** hint, warning, critical. Push notifications with a camera picture and the buttons "Seen", "Quiet for 5 min" and "Live"; critical alerts sent so that they sound through Do Not Disturb, repeated every 30 seconds; a local alarm (siren, light) after a minute; "on duty" and a babysitter mode.
-- **Watchdog:** every source is watched, and a failure is reported instead of showing "asleep". Messages on shutdown and after an interruption; heartbeat for an external dead-man buzzer.
+- **Alerts in three levels:** hint, warning, critical. Push notifications with a camera picture and the buttons "Seen", "Quiet for 5 min" and "Live"; critical alerts sent so that they sound through Do Not Disturb, repeated every 30 seconds; a local alarm (siren, light) after a minute; "on duty" and a babysitter mode with phones of its own. Every warning and critical alert also appears in Home Assistant's own notifications, and "Test alert" writes a report there on where the alert went.
+- **Watchdog:** every source is watched, and a failure is reported instead of showing "asleep". Losing only the picture, an unused vital source or a local alarm device (while a phone is set up) is shown as a hint without waking anyone. Messages on shutdown and after an interruption; an optional sign of life for an outage buzzer (dead-man buzzer) of your own, which sounds when Home Assistant falls silent.
 - **Learned noise floor**, so that white noise does not count as noise all night.
-- **AI assessment (optional):** one camera image through Home Assistant's AI Task with a fixed answer structure, budget, timeout and fallback order. The AI reaches a warning on its own, a critical alert only after a confirming second look, and it cannot clear or lower an alert from another source.
+- **AI assessment (optional):** add Google Gemini, OpenRouter or a local model as its own Home Assistant integration, pick it in CheckBaby and confirm; it then runs by itself. One camera image through Home Assistant's AI Task with a fixed answer structure, budget, timeout and fallback order. The AI reaches a warning on its own, a critical alert only after a confirming second look, and it cannot clear or lower an alert from another source.
 - **Breathing-movement hint (optional, shadow mode by default):** a rule over a radar entity and the vital engine.
-- **Also:** audio relay to a speaker, sleeping bag suggestion, sleep log, quick check and night report as buttons and actions, a "Quiet time" sensor and an alert event for your own automations, diagnostics download.
+- **Also:** audio relay to a speaker, sleeping bag suggestion, sleep log, quick check and night report as buttons and actions, with the result in Home Assistant's notifications and on the phone, a "Quiet time" sensor and an alert event for your own automations, diagnostics download.
 
 Not built yet, among other things: a guided function test, a warning before an update, a custom dashboard card, cough detection, a Baby Buddy link. The full list is in section 11 of [docs/MASTERPLAN.md](docs/MASTERPLAN.md) (German).
 
@@ -44,8 +46,8 @@ Not built yet, among other things: a guided function test, a warning before an u
 
 1. In HACS, add `https://github.com/Puma7/HACheckBaby` as a custom repository of type "Integration".
 2. Download "CheckBaby" and restart Home Assistant.
-3. Go to Settings → Devices & services → Add integration → CheckBaby.
-4. Press the button "Test alert" with your phone silenced, and check that it sounds.
+3. Go to Settings → Devices & services → Add integration → CheckBaby and answer five short pages.
+4. On the device page, press "Test alert" with your phone silenced and check that it sounds. The bell in Home Assistant then shows where the alert went. Switch on "Monitoring" when the child sleeps.
 
 The steps in detail, including the first function test, are in [Installation](docs/en/installation.md).
 
@@ -67,4 +69,4 @@ Examples are in [docs/examples](docs/examples) and [blueprints](blueprints/autom
 
 ## Development
 
-See [AGENTS.md](AGENTS.md) and the [checklist for the tests on real hardware](docs/development/phase-0-checkliste.md) (German). Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+See [AGENTS.md](AGENTS.md), the [lab](lab/README.md) and the [checklist for the tests on real hardware](docs/development/phase-0-checkliste.md) (both German). Changes are listed in [CHANGELOG.md](CHANGELOG.md).

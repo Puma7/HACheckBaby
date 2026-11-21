@@ -9,10 +9,10 @@ CheckBaby is an attention and convenience system for parents. It tells you when 
 **CheckBaby is not a medical device.** It makes no diagnosis and it guarantees no detection.
 
 - **It cannot prevent sudden infant death.** No monitoring device has been shown to do that. The American Academy of Pediatrics advises in its 2022 recommendations against using home monitors as a strategy to reduce that risk. Using one is not harmful, but it does not replace the measures that are proven to help.
-- **It can fail without warning.** It depends on a camera, Wi-Fi, Frigate, an MQTT broker, Home Assistant, your phone and usually the internet. The watchdog reports many failures, but not a failure of Home Assistant itself unless you build the dead-man buzzer, and not a phone that is switched off.
+- **It can fail without warning.** It depends on a camera, Wi-Fi, Frigate, an MQTT broker, Home Assistant, your phone and usually the internet. The watchdog reports many failures, but not a failure of Home Assistant itself unless you build an outage buzzer (dead-man buzzer), and not a phone that is switched off.
 - **It can be wrong in both directions.** Crying can go undetected, and alerts can be false. The AI assessment can describe a picture convincingly and incorrectly.
 - **The breathing-movement hint is unvalidated on infants** and is switched off by default. See [Vital sources](vital-sources.md).
-- **It has not run on real hardware yet.** The integration is covered by automated tests; the checks with a real camera, phone and sensor are still to be done.
+- **It has hardly run on real hardware yet.** The integration is covered by automated tests and by a lab with a real Home Assistant and simulated devices. A first installation on a real Home Assistant has taken place; it is not yet confirmed that a push arrives on a real phone, and the checks with a real camera, Frigate, AI provider and sensor are still to be done.
 
 What follows for you:
 
@@ -53,6 +53,7 @@ Everything is processed in your home, with one exception that you have to switch
 | Settings, active alerts, sleep log, learned noise floor | In a file in Home Assistant's storage folder. Deleted when you remove the entry. |
 | Event log (the last 300 decisions with their cause) | In memory only; lost at a restart. Included in the diagnostics download. |
 | Images for the AI assessment | Not stored by CheckBaby. Sent to the AI task you chose. |
+| Alerts and results in Home Assistant's notifications (the bell in the sidebar) | In Home Assistant, visible to everyone who is signed in there. Text only, no picture; the result of an AI check contains the AI's sentence. An alert's entry is removed when the alert ends or is answered; results and the delivery report of a test alert stay until you dismiss them or a newer one replaces them. |
 
 The sensors' history is kept by Home Assistant's recorder like that of any other entity.
 
@@ -75,7 +76,7 @@ Push notifications normally travel through Apple's or Google's servers.
 
 ### Cloud AI needs your consent
 
-With a cloud provider, an image of your child and its bed leaves your home with every assessment. CheckBaby does not send any image until you have ticked "Images of the child may be sent to these AI tasks" in the options. Depending on the plan, a provider may use images for training; read its terms. A local model keeps the images at home. Details are in [AI assessment](ai-assessment.md#privacy-and-consent).
+With a cloud provider, an image of your child and its bed leaves your home with every assessment. CheckBaby does not send any image until you have chosen an AI task and ticked "Images of the child may be sent to these AI tasks", in the setup or in the options. Depending on the plan, a provider may use images for training; read its terms. A local model keeps the images at home. Details are in [AI assessment](ai-assessment.md#privacy-and-consent).
 
 ### A camera in your own bedroom
 

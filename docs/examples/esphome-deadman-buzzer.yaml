@@ -1,11 +1,13 @@
-# ESPHome configuration for a dead-man buzzer (ESP32 with an active buzzer)
+# ESPHome configuration for an outage buzzer, also called a dead-man buzzer
+# (ESP32 with an active buzzer)
 #
 # UNTESTED: never compiled, never flashed, never heard. It has been checked for
 # valid YAML only. Build it, then test it by stopping Home Assistant on purpose.
 #
 # What it is for: if Home Assistant itself fails, it cannot warn anyone. This
-# device expects a regular "heartbeat" and makes a noise on its own when the
-# heartbeat stops, like the "connection lost" tone of a classic baby monitor.
+# device expects a regular sign of life (a "heartbeat") and makes a noise on
+# its own when it stops, like the "connection lost" tone of a classic baby
+# monitor.
 # Put it where you sleep, never in the child's room.
 #
 # How it works:
@@ -18,14 +20,17 @@
 #     Wi-Fi once it is armed.
 #
 # How it pairs with CheckBaby:
-#   - In the CheckBaby options, add this device's button
+#   - In the CheckBaby options (Configure -> Who is told), add this device's button
 #     (button.checkbaby_buzzer_heartbeat on an English Home Assistant) under
-#     "Dead-man heartbeat buttons".
+#     "Sign of life for an outage buzzer (optional)".
 #   - CheckBaby presses it every 30 seconds while Monitoring is on AND there
-#     is no monitoring problem. So the buzzer sounds about two minutes after
-#     Home Assistant stops, after CheckBaby stops, after the Wi-Fi between the
-#     two fails, and also after a monitoring problem (for example Frigate
-#     offline) has lasted two minutes.
+#     is no serious monitoring problem. So the buzzer sounds about two minutes
+#     after Home Assistant stops, after CheckBaby stops, after the Wi-Fi
+#     between the two fails, and also after a serious monitoring problem (for
+#     example Frigate offline) has lasted two minutes.
+#   - A minor problem does not stop the presses: a lost camera picture, a
+#     vital source that no alert depends on, or a local alarm that cannot be
+#     reached while a phone is set up. The buzzer stays quiet for these.
 #   - CheckBaby does NOT switch "Armed". When you turn Monitoring off, the
 #     presses stop, and an armed buzzer sounds two minutes later. Couple the
 #     two with an automation of your own, for example:

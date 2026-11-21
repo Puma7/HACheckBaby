@@ -7,6 +7,19 @@
 - The switch "AI assessment" is on by default and only pauses the assessment; it runs once an AI task and the consent are set.
 - After setup, a note says to switch on "Monitoring" and to press "Test alert" once.
 - The version number now follows the release tags.
+- Who is told: the phones are chosen with tick boxes. Every phone with the Home Assistant companion app is listed by its device name; other notify services are listed as `notify.<name>`; a target that no longer exists stays in the list with a "?" so that it can be unticked. In the first installation on a real Home Assistant, a phone chosen in the earlier search field was not saved.
+- Several babysitter phones: the field is now "Babysitters' phones", with tick boxes. They are told only while the mode is "Babysitter", in addition to the parents' phones. A phone ticked only there is refused with a message of its own.
+- The field for the heartbeat buttons of a dead-man buzzer is now called "Sign of life for an outage buzzer (optional)" and explains what such a buzzer is.
+- The heartbeat for an outage buzzer continues when only minor problems exist (a lost camera picture, an unused vital source, an unreachable local alarm while a phone is set up). It stops for serious problems only.
+- New monitoring problem `local_alarm` ("local alarm unreachable"): a local alarm entity is missing or unavailable, for example a smart lamp switched off at the wall. It is a minor problem. If no phone is set up and no local alarm entity can be reached, `notify` is raised instead, which is serious.
+- Alerts also appear in Home Assistant's own notifications (the bell in the sidebar): created when an alert is first sent or rises a level, removed when it ends or is answered.
+- "Test alert" writes a delivery report there that stays after the test is answered: which notify services accepted the message, which could not be reached, which local alarm entities are set or unreachable, and what to check on the phone.
+- The buttons "Quick check", "Send night report" and "AI check now" show their result in Home Assistant's notifications and send it to the phone on duty. "AI check now" shows the verdict with confidence and reason, or says why no check ran. The actions `checkbaby.quick_check` and `checkbaby.night_report` write the notification too when called with `notify: true`; `checkbaby.assess_now` is unchanged.
+- The AI field is now labelled "AI model (an "AI task" of Home Assistant)" and explains where an AI task comes from.
+- Fixed: an ended hint or snoozed warning no longer swallows the first notification of the next real warning.
+- Fixed: right after a restart of Home Assistant, phones and devices of other integrations that were still loading counted as missing and raised a monitoring warning. They are judged once Home Assistant has finished starting.
+- Fixed: a second test alert at warning level within two minutes of the first was raised without a notification.
+- Documentation: the phone as the main alarm and the local alarm as the path without internet, wall displays and tablets, a checklist "No notification arrives on the phone", what an AI task is.
 
 ## 0.0.2
 

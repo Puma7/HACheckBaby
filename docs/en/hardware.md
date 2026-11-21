@@ -50,7 +50,7 @@ Only the camera is required. Everything else adds a function.
 | Temperature and humidity sensor | Room climate display, temperature range alert, sleeping bag suggestion |
 | Seeed MR60BHA2 | Local radar source for the breathing-movement hint, see [Vital sources](vital-sources.md) |
 | Aqara FP2 | Local presence sensor for the bed; its vital data only through the cloud |
-| ESP32 with a buzzer | Dead-man warning when Home Assistant fails, see [`esphome-deadman-buzzer.yaml`](../examples/esphome-deadman-buzzer.yaml) |
+| ESP32 with a buzzer | Outage buzzer (dead-man buzzer): it sounds when Home Assistant falls silent, see [`esphome-deadman-buzzer.yaml`](../examples/esphome-deadman-buzzer.yaml) |
 | Smoke and CO detectors that Home Assistant can read | Passed through as a critical alert |
 | A sensor that shows whether the internet is reachable | Makes the local alarm fire at once while the internet is down |
 | UPS for server, switch and router (optional) | Bridges short power cuts |

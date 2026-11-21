@@ -4,7 +4,7 @@
 
 The AI assessment is optional. It looks at a still image of the bed and answers a fixed list of questions: is the child there, how is it lying, is the face free, are there loose objects in the bed. Everything else, including every crying alert and the watchdog, works without it and without the internet.
 
-The call to the AI has been tested against a simulated AI task only. Which providers accept a camera image through Home Assistant's AI Task, and how well a model judges an infrared night image, has not been tried yet. Check the result with a doll before you give it any weight.
+**What is verified and what is not.** The call path is verified in the project's lab with a scripted model: CheckBaby calls Home Assistant's real `ai_task` action, and the camera picture reaches the model as a JPEG file. No real provider (Google Gemini, OpenRouter, Ollama) has been tried yet. Whether each of them accepts the picture attachment, and how well a model judges an infrared night image, is still open. Check the result with a doll before you give it any weight.
 
 ## What the AI is not used for
 
@@ -12,15 +12,28 @@ The call to the AI has been tested against a simulated AI task only. Which provi
 
 The AI's own impression of whether the child is asleep or crying is stored with the answer and not used. The child's state comes from Frigate and your sensors.
 
+## What an AI task is and where it comes from
+
+An "AI task" is Home Assistant's connection to an AI model. CheckBaby does not talk to an AI provider itself and never asks for an API key. It hands the camera picture to an AI task, and Home Assistant passes it on to the model.
+
+An AI task appears in CheckBaby's list once you have added an AI integration to Home Assistant under **Settings → Devices & services**, for example Google Gemini, OpenRouter or Ollama (for a local model). It is usually named after the provider. **If the list in CheckBaby is empty, no such integration is set up yet.**
+
 ## Setting it up
 
-1. Set up an integration that provides an **AI Task** entity in Home Assistant, for example Google Gemini, OpenRouter or Ollama.
-2. Make sure the sleep place has a **Camera entity**. The image is taken from it.
-3. Open the options of the CheckBaby entry.
-4. Choose one or more entities under **AI tasks, in order of preference**.
-5. Tick **Images of the child may be sent to these AI tasks**. Without this the options cannot be saved while AI tasks are chosen.
-6. Set **AI calls per hour at most** (1 to 120, default 30).
-7. Turn on the switch **AI assessment** on the device. It is off by default.
+1. **Add the AI integration to Home Assistant.** Go to **Settings → Devices & services → Add integration**, choose **Google Gemini** or **OpenRouter** and enter the API key there. A local model through **Ollama** is added the same way. This is the one step that happens outside CheckBaby.
+2. **Open the options of CheckBaby:** **Settings → Devices & services → CheckBaby → Configure → AI assessment**. While you set CheckBaby up for the first time, the same page appears as "AI assessment (optional)".
+3. **Choose the model** in the field "AI model (an "AI task" of Home Assistant)".
+4. **Confirm that pictures may be sent:** tick "Images of the child may be sent to these AI tasks". Without the tick the page cannot be saved while a model is chosen.
+5. **Press "AI check now"** on the device page and read the result in Home Assistant's notifications (the bell in the sidebar). See [The result of "AI check now"](#the-result-of-ai-check-now).
+
+That is all. The assessment now runs by itself whenever Monitoring is on. You do not need the developer tools, an automation or any YAML.
+
+Good to know:
+
+- The sleep place needs a **Camera entity**. The picture is taken from it.
+- If you choose several AI tasks, they are asked in that order and the first usable answer is used.
+- **AI calls per hour at most** (1 to 120, default 30) is on the same options page.
+- The switch **AI assessment** on the device is on by default. It is a pause button: switch it off to stop the automatic assessments for a while without removing the AI task.
 
 ## What is sent and what is asked
 
@@ -52,7 +65,7 @@ The plan foresaw a series of three or four images. AI Task delivers one current 
 
 ## When it runs
 
-Automatic assessments need all of this: Monitoring on, privacy mode off, the switch "AI assessment" on, AI tasks and consent in the options, a camera entity, and the child not "Attended".
+Automatic assessments need all of this: an AI task and the consent (from the setup or the options), a camera entity, Monitoring on, privacy mode off, the switch "AI assessment" not switched off, and the child not "Attended".
 
 | Trigger | When |
 |---|---|
@@ -66,14 +79,24 @@ Only one assessment runs at a time.
 
 A manual assessment is carried out whenever AI tasks, consent and a camera entity are configured and privacy mode is off. It ignores the switch "AI assessment", the budget and whether Monitoring is on. While Monitoring is off, its result is displayed but raises no alert.
 
-**In privacy mode no assessment is carried out at all, not even a manual one.** No image is sent; the button does nothing and the action returns an empty result.
+**In privacy mode no assessment is carried out at all, not even a manual one.** No image is sent; the button only reports that privacy mode is on, and the action returns an empty result.
+
+### The result of "AI check now"
+
+The button "AI check now" always shows what came of it: in Home Assistant's notifications (the bell in the sidebar) and as a notification on the phone on duty. A newer result replaces the older one.
+
+- **If a check ran,** you read the AI's verdict, how sure it is and its reason in one sentence, for example "Looks fine (90 % sure). The child lies on its back and the face is free." The verdicts are "Looks fine", "Worth a look", "Please check" and "Possible danger".
+- **If no check ran,** you read why: no AI task is chosen, sending pictures is not confirmed, privacy mode is on, the active sleep place has no camera entity, or a check is already running.
+- **If the AI gave no usable answer,** you read that together with the error of the AI task that was tried last: a timeout, the provider's error message, or "unusable answer".
+
+The action `checkbaby.assess_now` behaves as before: it returns the data and shows nothing.
 
 ## Budget, timeout and fallback
 
 - **Budget:** at most the configured number of calls in any 60 minutes. When it is used up, automatic assessments are skipped until calls drop out of the hour. Manual assessments are always carried out and count towards the budget. The sensor "AI calls in the last hour" shows the count. With a routine check every 10 minutes, expect roughly 6 calls per hour plus the event-driven ones; the cost depends on your provider.
 - **Fallback order:** the AI tasks are asked in the order you chose. The first usable answer wins. This is how you put a cloud model first and a local model second, or the other way round.
 - **Timeout:** each AI task has 20 seconds. A timeout, an error or an unusable answer moves on to the next task.
-- **If none answers:** the binary sensor "AI assessment available" turns off and nothing else changes. The deterministic alerts work as before. An AI that cannot be reached never results in "all fine".
+- **If none answers:** the binary sensor "AI assessment available" turns off and nothing else changes. A check started with the button "AI check now" also says so in its result. The deterministic alerts work as before. An AI that cannot be reached never results in "all fine".
 
 One assessment counts as one call towards the budget, however many AI tasks had to be tried.
 

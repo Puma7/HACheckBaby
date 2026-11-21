@@ -523,7 +523,7 @@ async def reports_and_diagnostics(run: Run) -> None:
     await api.call("button", "press", {"entity_id": run.entity("button", "assess_now")})
     await run.until("the button 'AI check now' shows the AI's answer", lambda: "% sure" in run.notices().get("ai_check", ""), 15)
 
-    await api.call("checkbaby", "test_alert", {"level": "warning"})
+    await api.call("checkbaby", "test_alert", {"level": "critical"})
     await run.until("a test alert writes a delivery report", lambda: "test_delivery" in run.notices(), 6)
     delivery = run.notices().get("test_delivery", "")
     run.check("the report names both phones and the siren",

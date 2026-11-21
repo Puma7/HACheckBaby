@@ -310,6 +310,8 @@ class Monitor:
     def test_alert(self, now: float, level: AlertLevel = AlertLevel.CRITICAL) -> None:
         """Raise a test alert that runs the full notification chain."""
         self.alerts.clear(AlertKind.TEST, now)
+        # Whoever presses the button twice wants to see two test alerts.
+        self.alerts.forget_cooldown(AlertKind.TEST)
         self.alerts.raise_alert(AlertKind.TEST, level, {}, now)
         self._log("test_alert", now, level=int(level))
 

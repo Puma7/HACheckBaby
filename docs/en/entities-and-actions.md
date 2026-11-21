@@ -57,7 +57,7 @@ In automations and dashboards, check the real IDs on the device page before you 
 |---|---|---|---|
 | Monitoring | `switch.baby_monitoring` | off | Arms the monitor. While off, only smoke/CO and the test alert notify. |
 | Privacy mode | `switch.baby_privacy_mode` | off | Pauses detection and notifications, see [How it works](how-it-works.md#privacy-mode). |
-| AI assessment | `switch.baby_ai_assessment` | off | Allows the automatic AI assessments. Needs AI tasks and consent in the options. |
+| AI assessment | `switch.baby_ai_assessment` | on | A pause button: switch it off to stop the automatic AI assessments. Being on does nothing by itself; the assessment runs once an AI task is chosen and the consent is given, in the setup or under Configure → AI assessment. |
 | Breathing-movement alert | `switch.baby_breathing_movement_alert` | off | Off: "no breathing movement" is only recorded (shadow mode). On: it raises a critical alert. Read [Vital sources](vital-sources.md) before you turn it on. |
 | Audio relay | `switch.baby_audio_relay` | off | Plays the room's audio stream on the speaker while there is noise. |
 
@@ -85,14 +85,18 @@ In automations and dashboards, check the real IDs on the device page before you 
 
 ## Buttons
 
-| Name | Entity ID | What it does |
-|---|---|---|
-| Seen | `button.baby_seen` | Acknowledges all active alerts. |
-| Quiet for 5 minutes | `button.baby_quiet_for_5_minutes` | Holds warnings back for five minutes. |
-| Quick check | `button.baby_quick_check` | Sends a one- or two-sentence summary to the phone on duty. |
-| AI check now | `button.baby_ai_check_now` | Asks the AI about a fresh camera image, regardless of the switch "AI assessment", the budget and whether Monitoring is on. Does nothing while privacy mode is on. |
-| Send night report | `button.baby_send_night_report` | Sends the night report to the phone on duty. |
-| Test alert | `button.baby_test_alert` | Diagnostic. Starts a critical test alert. |
+| Name | Entity ID | What it does | Where the result appears |
+|---|---|---|---|
+| Seen | `button.baby_seen` | Acknowledges all active alerts. | Their notifications disappear from the phones and from Home Assistant's notifications. |
+| Quiet for 5 minutes | `button.baby_quiet_for_5_minutes` | Holds warnings back for five minutes. | Warnings that are showing disappear from the phones and from Home Assistant's notifications. |
+| Quick check | `button.baby_quick_check` | Sums up in one or two sentences how the child is right now. | In Home Assistant's notifications and on the phone on duty. |
+| AI check now | `button.baby_ai_check_now` | Asks the AI about a fresh camera image, regardless of the switch "AI assessment", the budget and whether Monitoring is on. No image is sent while privacy mode is on. | In Home Assistant's notifications and on the phone on duty: the AI's verdict with confidence and reason, or the reason why no check ran. See [AI assessment](ai-assessment.md#the-result-of-ai-check-now). |
+| Send night report | `button.baby_send_night_report` | Sums up the night since the most recent 18:00. | In Home Assistant's notifications and on the phone on duty. |
+| Test alert | `button.baby_test_alert` | Diagnostic. Starts a critical test alert. | On all phones and in Home Assistant's notifications, where a delivery report is written as well. The report stays after the test is answered. |
+
+"Home Assistant's notifications" are the bell in the sidebar. A result is always written there, so that pressing a button shows something even when no phone is set up or reachable. A newer result of the same button replaces the older one, there and on the phone.
+
+The delivery report of the test alert lists which notify services accepted the message, which could not be reached, which local alarm entities are set and which of them are unreachable. If the message was sent, it also says what to check on the phone when nothing showed up: the app's notification permission and, on iOS, critical alerts.
 
 ## Event
 
@@ -102,6 +106,8 @@ In automations and dashboards, check the real IDs on the device page before you 
 
 The event does not fire for hints, for repeats, for the repeat to all phones after 180 seconds, or for alerts that are only recorded. A warning that is held back by snooze fires when it is sent after the quiet time.
 
+How to use this entity, the binary sensor "Unanswered alert" or the local alarm for a wall display is described under [Wall displays and tablets](how-it-works.md#wall-displays-and-tablets).
+
 ## Actions
 
 Every action accepts the optional field `config_entry_id` (shown as "Child"). You only need it when more than one child is set up; with exactly one child it can be left out. If it is missing with several children, the action fails with "Choose the child".
@@ -110,12 +116,12 @@ Every action accepts the optional field `config_entry_id` (shown as "Child"). Yo
 |---|---|---|---|
 | `checkbaby.acknowledge` | – | Marks all active warnings and critical alerts as seen. | Nothing |
 | `checkbaby.snooze` | `minutes` (1 to 120, default 5) | Holds warnings back for that long. Critical alerts still come through. | Nothing |
-| `checkbaby.test_alert` | `level`: `critical` (default) or `warning` | Runs the notification chain with a test alert until it is acknowledged, at most 10 minutes. Works while Monitoring is off. | Nothing |
+| `checkbaby.test_alert` | `level`: `critical` (default) or `warning` | Runs the notification chain with a test alert until it is acknowledged, at most 10 minutes. Works while Monitoring is off. Writes the delivery report into Home Assistant's notifications, like the button. | Nothing |
 | `checkbaby.start_sleep` | – | Sets the state to "Asleep" now. | Nothing |
 | `checkbaby.end_sleep` | – | Sets the state to "Awake" now. | Nothing |
-| `checkbaby.assess_now` | – | Asks the configured AI tasks about a fresh camera image. | `assessment` |
-| `checkbaby.quick_check` | `with_ai` (default false): take a fresh AI look first (skipped while privacy mode is on). `notify` (default false): also send the summary to the phone on duty. | Reports how the child is right now. | See below |
-| `checkbaby.night_report` | `notify` (default false) | Reports the night since the most recent 18:00. | See below |
+| `checkbaby.assess_now` | – | Asks the configured AI tasks about a fresh camera image. Unlike the button, it shows nothing; it only returns the data. | `assessment` |
+| `checkbaby.quick_check` | `with_ai` (default false): take a fresh AI look first (skipped while privacy mode is on). `notify` (default false): also send the summary to the phone on duty and write it into Home Assistant's notifications. | Reports how the child is right now. | See below |
+| `checkbaby.night_report` | `notify` (default false): also send the summary to the phone on duty and write it into Home Assistant's notifications. | Reports the night since the most recent 18:00. | See below |
 
 ### What `assess_now` returns
 

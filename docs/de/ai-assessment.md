@@ -4,7 +4,7 @@
 
 Die KI-Bewertung ist optional. Sie schaut auf ein Standbild des Bettes und beantwortet eine feste Liste von Fragen: Ist das Kind da, wie liegt es, ist das Gesicht frei, liegen lose Gegenstände im Bett. Alles andere, auch jeder Wein-Alarm und die Ausfallüberwachung, funktioniert ohne sie und ohne Internet.
 
-Der Aufruf der KI wurde nur gegen eine simulierte KI-Aufgabe getestet. Welche Anbieter über AI Task von Home Assistant ein Kamerabild annehmen und wie gut ein Modell ein Infrarot-Nachtbild beurteilt, wurde noch nicht ausprobiert. Prüfe das Ergebnis mit einer Puppe, bevor du ihm Gewicht gibst.
+**Was geprüft ist und was nicht.** Der Aufrufweg ist im Labor des Projekts mit einem Modell geprüft, das nach Drehbuch antwortet: CheckBaby ruft die echte Aktion `ai_task` von Home Assistant auf, und das Kamerabild kommt als JPEG-Datei beim Modell an. Ein echter Anbieter (Google Gemini, OpenRouter, Ollama) wurde noch nicht ausprobiert. Ob jeder von ihnen den Bildanhang annimmt und wie gut ein Modell ein Infrarot-Nachtbild beurteilt, ist noch offen. Prüfe das Ergebnis mit einer Puppe, bevor du ihm Gewicht gibst.
 
 ## Wofür die KI nicht verwendet wird
 
@@ -12,15 +12,28 @@ Der Aufruf der KI wurde nur gegen eine simulierte KI-Aufgabe getestet. Welche An
 
 Der Eindruck der KI, ob das Kind schläft oder weint, wird mit der Antwort gespeichert und nicht verwendet. Der Zustand des Kindes kommt aus Frigate und deinen Sensoren.
 
+## Was eine KI-Aufgabe ist und woher sie kommt
+
+Eine „KI-Aufgabe" (englisch „AI Task") ist der Anschluss von Home Assistant an ein KI-Modell. CheckBaby spricht nicht selbst mit einem KI-Anbieter und fragt nie nach einem API-Schlüssel. Es übergibt das Kamerabild an eine KI-Aufgabe, und Home Assistant reicht es an das Modell weiter.
+
+Eine KI-Aufgabe erscheint in der Liste von CheckBaby, sobald du in Home Assistant unter **Einstellungen → Geräte & Dienste** eine KI-Integration hinzugefügt hast, zum Beispiel Google Gemini, OpenRouter oder Ollama (für ein lokales Modell). Sie heißt meist wie der Anbieter. **Ist die Liste in CheckBaby leer, ist noch keine solche Integration eingerichtet.**
+
 ## Einrichten
 
-1. Richte in Home Assistant eine Integration ein, die eine **AI-Task-Entität** (KI-Aufgabe) bereitstellt, zum Beispiel Google Gemini, OpenRouter oder Ollama.
-2. Sorge dafür, dass der Schlafplatz eine **Kamera-Entität** hat. Von ihr stammt das Bild.
-3. Öffne die Optionen des CheckBaby-Eintrags.
-4. Wähle unter **KI-Aufgaben, in bevorzugter Reihenfolge** eine oder mehrere Entitäten.
-5. Kreuze **Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden** an. Ohne das lassen sich die Optionen nicht speichern, solange KI-Aufgaben gewählt sind.
-6. Stelle **KI-Aufrufe pro Stunde höchstens** ein (1 bis 120, Standard 30).
-7. Schalte am Gerät den Schalter **KI-Bewertung** ein. Er ist standardmäßig aus.
+1. **Füge die KI-Integration zu Home Assistant hinzu.** Gehe zu **Einstellungen → Geräte & Dienste → Integration hinzufügen**, wähle **Google Gemini** oder **OpenRouter** und trage dort den API-Schlüssel ein. Ein lokales Modell über **Ollama** fügst du genauso hinzu. Das ist der eine Schritt, der außerhalb von CheckBaby geschieht.
+2. **Öffne die Optionen von CheckBaby:** **Einstellungen → Geräte & Dienste → CheckBaby → Konfigurieren → KI-Bewertung**. Wenn du CheckBaby zum ersten Mal einrichtest, erscheint dieselbe Seite als „KI-Bewertung (optional)".
+3. **Wähle das Modell** im Feld „KI-Modell (eine „KI-Aufgabe" von Home Assistant)".
+4. **Bestätige, dass Bilder gesendet werden dürfen:** Kreuze „Bilder des Kindes dürfen an diese KI-Aufgaben gesendet werden" an. Ohne das Häkchen lässt sich die Seite nicht speichern, solange ein Modell gewählt ist.
+5. **Drücke „KI-Check jetzt"** auf der Geräteseite und lies das Ergebnis in den Benachrichtigungen von Home Assistant (die Glocke in der Seitenleiste). Siehe [Das Ergebnis von „KI-Check jetzt"](#das-ergebnis-von-ki-check-jetzt).
+
+Das ist alles. Die Bewertung läuft jetzt von selbst, sobald die Überwachung an ist. Du brauchst weder die Entwicklerwerkzeuge noch eine Automation noch YAML.
+
+Gut zu wissen:
+
+- Der Schlafplatz braucht eine **Kamera-Entität**. Von ihr stammt das Bild.
+- Wählst du mehrere KI-Aufgaben, werden sie in dieser Reihenfolge gefragt, und die erste verwertbare Antwort gilt.
+- **KI-Aufrufe pro Stunde höchstens** (1 bis 120, Standard 30) steht auf derselben Seite der Optionen.
+- Der Schalter **KI-Bewertung** am Gerät ist standardmäßig an. Er ist eine Pausentaste: Schalte ihn aus, um die automatischen Bewertungen eine Zeit lang anzuhalten, ohne die KI-Aufgabe zu entfernen.
 
 ## Was gesendet und was gefragt wird
 
@@ -52,7 +65,7 @@ Der Plan sah eine Serie von drei oder vier Bildern vor. AI Task liefert je Kamer
 
 ## Wann sie läuft
 
-Automatische Bewertungen brauchen all das: Überwachung an, Privatmodus aus, Schalter „KI-Bewertung" an, KI-Aufgaben und Einwilligung in den Optionen, eine Kamera-Entität, und das Kind ist nicht „Betreut".
+Automatische Bewertungen brauchen all das: eine KI-Aufgabe und die Einwilligung (aus der Einrichtung oder den Optionen), eine Kamera-Entität, Überwachung an, Privatmodus aus, der Schalter „KI-Bewertung" ist nicht ausgeschaltet, und das Kind ist nicht „Betreut".
 
 | Auslöser | Wann |
 |---|---|
@@ -66,14 +79,24 @@ Es läuft immer nur eine Bewertung gleichzeitig.
 
 Eine Bewertung von Hand wird ausgeführt, sobald KI-Aufgaben, Einwilligung und eine Kamera-Entität eingerichtet sind und der Privatmodus aus ist. Sie beachtet weder den Schalter „KI-Bewertung" noch das Budget oder die Frage, ob die Überwachung an ist. Solange die Überwachung aus ist, wird ihr Ergebnis angezeigt, löst aber keinen Alarm aus.
 
-**Im Privatmodus wird gar keine Bewertung ausgeführt, auch keine von Hand.** Es wird kein Bild gesendet; die Taste tut nichts, und die Aktion gibt ein leeres Ergebnis zurück.
+**Im Privatmodus wird gar keine Bewertung ausgeführt, auch keine von Hand.** Es wird kein Bild gesendet; die Taste meldet nur, dass der Privatmodus an ist, und die Aktion gibt ein leeres Ergebnis zurück.
+
+### Das Ergebnis von „KI-Check jetzt"
+
+Die Taste „KI-Check jetzt" zeigt immer, was dabei herausgekommen ist: in den Benachrichtigungen von Home Assistant (die Glocke in der Seitenleiste) und als Benachrichtigung auf dem Handy im Dienst. Ein neueres Ergebnis ersetzt das ältere.
+
+- **Lief ein Check,** liest du das Urteil der KI, wie sicher sie ist, und ihre Begründung in einem Satz, zum Beispiel „Sieht gut aus (90 % sicher). Das Kind liegt auf dem Rücken, und das Gesicht ist frei." Die Urteile heißen „Sieht gut aus", „Einen Blick wert", „Bitte nachsehen" und „Mögliche Gefahr".
+- **Lief kein Check,** liest du den Grund: Es ist keine KI-Aufgabe gewählt, das Senden von Bildern ist nicht bestätigt, der Privatmodus ist an, der aktive Schlafplatz hat keine Kamera-Entität, oder es läuft schon ein Check.
+- **Gab die KI keine brauchbare Antwort,** liest du das zusammen mit dem Fehler der zuletzt versuchten KI-Aufgabe: eine Zeitüberschreitung, die Fehlermeldung des Anbieters oder „unusable answer" (unbrauchbare Antwort).
+
+Die Aktion `checkbaby.assess_now` verhält sich wie bisher: Sie gibt die Daten zurück und zeigt nichts an.
 
 ## Budget, Zeitlimit und Ausweichkette
 
 - **Budget:** höchstens die eingestellte Zahl von Aufrufen in beliebigen 60 Minuten. Ist es verbraucht, entfallen automatische Bewertungen, bis Aufrufe aus der Stunde herausfallen. Bewertungen von Hand werden immer ausgeführt und zählen zum Budget. Der Sensor „KI-Aufrufe in der letzten Stunde" zeigt den Stand. Bei einer Routineprüfung alle 10 Minuten kannst du mit etwa 6 Aufrufen pro Stunde rechnen, dazu die ereignisgesteuerten; die Kosten hängen von deinem Anbieter ab.
 - **Ausweichkette:** Die KI-Aufgaben werden in der Reihenfolge gefragt, die du gewählt hast. Die erste verwertbare Antwort gilt. So setzt du ein Cloud-Modell an die erste und ein lokales an die zweite Stelle, oder umgekehrt.
 - **Zeitlimit:** Jede KI-Aufgabe hat 20 Sekunden. Eine Zeitüberschreitung, ein Fehler oder eine unbrauchbare Antwort führt zur nächsten Aufgabe.
-- **Wenn keine antwortet:** Der Binärsensor „KI-Bewertung verfügbar" geht aus, und sonst ändert sich nichts. Die deterministischen Alarme arbeiten wie zuvor. Eine KI, die nicht erreichbar ist, führt nie zu „alles in Ordnung".
+- **Wenn keine antwortet:** Der Binärsensor „KI-Bewertung verfügbar" geht aus, und sonst ändert sich nichts. Ein Check, den du mit der Taste „KI-Check jetzt" gestartet hast, sagt das auch in seinem Ergebnis. Die deterministischen Alarme arbeiten wie zuvor. Eine KI, die nicht erreichbar ist, führt nie zu „alles in Ordnung".
 
 Eine Bewertung zählt als ein Aufruf im Budget, egal wie viele KI-Aufgaben dafür versucht werden mussten.
 

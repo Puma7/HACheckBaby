@@ -179,6 +179,10 @@ class AlertManager:
             self._cleared_at[kind] = now
             self._out.append(Notification(kind, alert.level, Stage.CLEARED, Audience.ALL, alert.detail))
 
+    def forget_cooldown(self, kind: AlertKind) -> None:
+        """Let the next alert of this kind notify at once."""
+        self._cleared_at.pop(kind, None)
+
     def acknowledge(self, now: float) -> int:
         """Someone has seen the alerts. Returns how many were acknowledged."""
         count = 0

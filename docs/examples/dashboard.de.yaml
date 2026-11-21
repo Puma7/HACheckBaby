@@ -27,8 +27,9 @@
 #
 # Es werden nur Standardkarten verwendet. Soll der Knopf „Live" einer
 # Benachrichtigung diese Ansicht öffnen, trage ihren Pfad (zum Beispiel
-# /dashboard-baby/baby) in den CheckBaby-Optionen unter „Dashboard, das eine
-# Benachrichtigung öffnet" ein.
+# /dashboard-baby/baby) in den CheckBaby-Optionen (Konfigurieren -> Weitere
+# Geräte und Einstellungen) unter „Dashboard, das eine Benachrichtigung öffnet"
+# ein.
 #
 # CheckBaby ist kein Medizinprodukt.
 

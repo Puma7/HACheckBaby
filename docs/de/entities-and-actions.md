@@ -59,7 +59,7 @@ Die Zustandswerte in Klammern (zum Beispiel `asleep`) sind in jeder Sprache glei
 |---|---|---|---|
 | Überwachung | `switch.baby_uberwachung` | aus | Schaltet die Überwachung scharf. Solange sie aus ist, melden sich nur Rauch/CO und der Testalarm. |
 | Privatmodus | `switch.baby_privatmodus` | aus | Pausiert Erkennung und Benachrichtigungen, siehe [So funktioniert es](how-it-works.md#privatmodus). |
-| KI-Bewertung | `switch.baby_ki_bewertung` | aus | Erlaubt die automatischen KI-Bewertungen. Braucht KI-Aufgaben und Einwilligung in den Optionen. |
+| KI-Bewertung | `switch.baby_ki_bewertung` | an | Eine Pausentaste: Ausschalten hält die automatischen KI-Bewertungen an. „An" bewirkt für sich nichts; die Bewertung läuft, sobald eine KI-Aufgabe gewählt und die Einwilligung gegeben ist, in der Einrichtung oder unter Konfigurieren → KI-Bewertung. |
 | Atembewegungs-Alarm | `switch.baby_atembewegungs_alarm` | aus | Aus: „keine Atembewegung" wird nur aufgezeichnet (Schattenmodus). An: Es löst einen kritischen Alarm aus. Lies [Vitalquellen](vital-sources.md), bevor du ihn einschaltest. |
 | Ton-Weiterleitung | `switch.baby_ton_weiterleitung` | aus | Spielt den Ton-Stream des Zimmers auf dem Lautsprecher, solange es Geräusch gibt. |
 
@@ -87,14 +87,18 @@ Die Zustandswerte in Klammern (zum Beispiel `asleep`) sind in jeder Sprache glei
 
 ## Tasten
 
-| Name | Entitäts-ID | Was sie tut |
-|---|---|---|
-| Gesehen | `button.baby_gesehen` | Quittiert alle aktiven Alarme. |
-| 5 Minuten Ruhe | `button.baby_5_minuten_ruhe` | Hält Warnungen fünf Minuten zurück. |
-| Schnell-Check | `button.baby_schnell_check` | Sendet eine Zusammenfassung in ein oder zwei Sätzen an das Handy im Dienst. |
-| KI-Check jetzt | `button.baby_ki_check_jetzt` | Fragt die KI zu einem frischen Kamerabild, unabhängig vom Schalter „KI-Bewertung", vom Budget und davon, ob die Überwachung an ist. Tut nichts, solange der Privatmodus an ist. |
-| Nachtbericht senden | `button.baby_nachtbericht_senden` | Sendet den Nachtbericht an das Handy im Dienst. |
-| Testalarm | `button.baby_testalarm` | Diagnose. Startet einen kritischen Testalarm. |
+| Name | Entitäts-ID | Was sie tut | Wo das Ergebnis erscheint |
+|---|---|---|---|
+| Gesehen | `button.baby_gesehen` | Quittiert alle aktiven Alarme. | Ihre Benachrichtigungen verschwinden von den Handys und aus den Benachrichtigungen von Home Assistant. |
+| 5 Minuten Ruhe | `button.baby_5_minuten_ruhe` | Hält Warnungen fünf Minuten zurück. | Angezeigte Warnungen verschwinden von den Handys und aus den Benachrichtigungen von Home Assistant. |
+| Schnell-Check | `button.baby_schnell_check` | Fasst in ein oder zwei Sätzen zusammen, wie es dem Kind gerade geht. | In den Benachrichtigungen von Home Assistant und auf dem Handy im Dienst. |
+| KI-Check jetzt | `button.baby_ki_check_jetzt` | Fragt die KI zu einem frischen Kamerabild, unabhängig vom Schalter „KI-Bewertung", vom Budget und davon, ob die Überwachung an ist. Solange der Privatmodus an ist, wird kein Bild gesendet. | In den Benachrichtigungen von Home Assistant und auf dem Handy im Dienst: das Urteil der KI mit Sicherheit und Begründung, oder der Grund, warum kein Check lief. Siehe [KI-Bewertung](ai-assessment.md#das-ergebnis-von-ki-check-jetzt). |
+| Nachtbericht senden | `button.baby_nachtbericht_senden` | Fasst die Nacht seit dem letzten 18:00 Uhr zusammen. | In den Benachrichtigungen von Home Assistant und auf dem Handy im Dienst. |
+| Testalarm | `button.baby_testalarm` | Diagnose. Startet einen kritischen Testalarm. | Auf allen Handys und in den Benachrichtigungen von Home Assistant, wo zusätzlich ein Zustellbericht geschrieben wird. Der Bericht bleibt stehen, auch nachdem der Test beantwortet ist. |
+
+Die „Benachrichtigungen von Home Assistant" sind die Glocke in der Seitenleiste. Ein Ergebnis wird immer dorthin geschrieben, damit ein Tastendruck auch dann etwas zeigt, wenn kein Handy eingerichtet oder erreichbar ist. Ein neueres Ergebnis derselben Taste ersetzt das ältere, dort und auf dem Handy.
+
+Der Zustellbericht des Testalarms nennt, welche Benachrichtigungsdienste die Nachricht angenommen haben, welche nicht erreichbar waren, welche Entitäten als lokaler Alarm eingetragen sind und welche davon nicht erreichbar sind. Wurde die Nachricht gesendet, sagt er außerdem, was du am Handy prüfen kannst, wenn dort nichts erschienen ist: die Berechtigung der App für Mitteilungen und unter iOS die kritischen Hinweise.
 
 ## Ereignis
 
@@ -104,6 +108,8 @@ Die Zustandswerte in Klammern (zum Beispiel `asleep`) sind in jeder Sprache glei
 
 Das Ereignis löst nicht aus bei Hinweisen, bei Wiederholungen, bei der Wiederholung an alle Handys nach 180 Sekunden und bei Alarmen, die nur aufgezeichnet werden. Eine Warnung, die durch Schlummern zurückgehalten wird, löst aus, wenn sie nach der Ruhezeit gesendet wird.
 
+Wie du diese Entität, den Binärsensor „Unbeantworteter Alarm" oder den lokalen Alarm für ein Wanddisplay nutzt, steht unter [Wanddisplays und Tablets](how-it-works.md#wanddisplays-und-tablets).
+
 ## Aktionen
 
 Jede Aktion nimmt das optionale Feld `config_entry_id` an (angezeigt als „Kind"). Du brauchst es nur, wenn mehr als ein Kind eingerichtet ist; bei genau einem Kind kannst du es weglassen. Fehlt es bei mehreren Kindern, scheitert die Aktion mit „Bitte das Kind wählen".
@@ -112,12 +118,12 @@ Jede Aktion nimmt das optionale Feld `config_entry_id` an (angezeigt als „Kind
 |---|---|---|---|
 | `checkbaby.acknowledge` | – | Markiert alle aktiven Warnungen und kritischen Alarme als gesehen. | Nichts |
 | `checkbaby.snooze` | `minutes` (1 bis 120, Standard 5) | Hält Warnungen so lange zurück. Kritische Alarme kommen trotzdem durch. | Nichts |
-| `checkbaby.test_alert` | `level`: `critical` (Standard) oder `warning` | Durchläuft die Benachrichtigungskette mit einem Testalarm, bis quittiert wird, höchstens 10 Minuten. Funktioniert auch bei ausgeschalteter Überwachung. | Nichts |
+| `checkbaby.test_alert` | `level`: `critical` (Standard) oder `warning` | Durchläuft die Benachrichtigungskette mit einem Testalarm, bis quittiert wird, höchstens 10 Minuten. Funktioniert auch bei ausgeschalteter Überwachung. Schreibt wie die Taste den Zustellbericht in die Benachrichtigungen von Home Assistant. | Nichts |
 | `checkbaby.start_sleep` | – | Setzt den Zustand jetzt auf „Schläft". | Nichts |
 | `checkbaby.end_sleep` | – | Setzt den Zustand jetzt auf „Wach". | Nichts |
-| `checkbaby.assess_now` | – | Fragt die eingerichteten KI-Aufgaben zu einem frischen Kamerabild. | `assessment` |
-| `checkbaby.quick_check` | `with_ai` (Standard false): zuerst einen frischen KI-Blick einholen (entfällt, solange der Privatmodus an ist). `notify` (Standard false): die Zusammenfassung zusätzlich an das Handy im Dienst senden. | Meldet, wie es dem Kind gerade geht. | Siehe unten |
-| `checkbaby.night_report` | `notify` (Standard false) | Meldet die Nacht seit dem letzten 18:00 Uhr. | Siehe unten |
+| `checkbaby.assess_now` | – | Fragt die eingerichteten KI-Aufgaben zu einem frischen Kamerabild. Anders als die Taste zeigt sie nichts an; sie gibt nur die Daten zurück. | `assessment` |
+| `checkbaby.quick_check` | `with_ai` (Standard false): zuerst einen frischen KI-Blick einholen (entfällt, solange der Privatmodus an ist). `notify` (Standard false): die Zusammenfassung zusätzlich an das Handy im Dienst senden und in die Benachrichtigungen von Home Assistant schreiben. | Meldet, wie es dem Kind gerade geht. | Siehe unten |
+| `checkbaby.night_report` | `notify` (Standard false): die Zusammenfassung zusätzlich an das Handy im Dienst senden und in die Benachrichtigungen von Home Assistant schreiben. | Meldet die Nacht seit dem letzten 18:00 Uhr. | Siehe unten |
 
 ### Was `assess_now` zurückgibt
 

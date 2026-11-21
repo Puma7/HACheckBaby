@@ -54,7 +54,6 @@ _EN: dict[str, str] = {
         "Nothing on the phone? Check that the Home Assistant app is allowed to notify, "
         "and on iOS that critical alerts are allowed."
     ),
-    "ai_title": "AI check",
     "ai_result": "{verdict} ({confidence} % sure). {reason}",
     "ai_verdict_ok": "Looks fine",
     "ai_verdict_attention": "Worth a look",
@@ -131,7 +130,6 @@ _DE: dict[str, str] = {
         "Nichts auf dem Handy? Prüfe, ob die Home-Assistant-App Mitteilungen senden darf, "
         "und unter iOS, ob kritische Hinweise erlaubt sind."
     ),
-    "ai_title": "KI-Check",
     "ai_result": "{verdict} ({confidence} % sicher). {reason}",
     "ai_verdict_ok": "Sieht gut aus",
     "ai_verdict_attention": "Einen Blick wert",

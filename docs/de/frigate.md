@@ -8,7 +8,7 @@ Die MQTT-Themen unten sind die aus dem Code. Sie folgen der Frigate-Dokumentatio
 
 ## Was CheckBaby liest
 
-`<präfix>` ist das MQTT-Präfix von Frigate. Der Standard ist `frigate`; wenn du in Frigate `topic_prefix` geändert hast, trage denselben Wert in den CheckBaby-Optionen unter **MQTT-Präfix von Frigate** ein. `<kamera>` ist der **Name der Frigate-Kamera** des aktiven Schlafplatzes, `<zone>` dessen **Frigate-Zone des Bettes**.
+`<präfix>` ist das MQTT-Präfix von Frigate. Der Standard ist `frigate`; wenn du in Frigate `topic_prefix` geändert hast, trage denselben Wert in CheckBaby unter **Konfigurieren → Weitere Geräte und Einstellungen → MQTT-Präfix von Frigate** ein. `<kamera>` ist der **Name der Frigate-Kamera** des aktiven Schlafplatzes, `<zone>` dessen **Frigate-Zone des Bettes**.
 
 | Thema | Erwartete Nutzlast | Was CheckBaby damit macht |
 |---|---|---|

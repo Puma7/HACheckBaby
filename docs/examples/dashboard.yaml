@@ -22,7 +22,8 @@
 #
 # It uses standard cards only. If you want a notification's "Live" button to
 # open this view, enter its path (for example /dashboard-baby/baby) in the
-# CheckBaby options under "Dashboard opened from a notification".
+# CheckBaby options (Configure -> Other devices and settings) under
+# "Dashboard opened from a notification".
 #
 # CheckBaby is not a medical device.
 
