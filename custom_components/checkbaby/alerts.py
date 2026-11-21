@@ -154,8 +154,9 @@ class AlertManager:
             alert.level_since = now
             alert.acked = False
             alert.escalated = False
-            alert.local_fired = False
-            if not shadow and level >= AlertLevel.WARNING:
+            # local_fired is kept: a local alarm that is sounding must not pause
+            # just because the alert got worse.
+            if level >= AlertLevel.WARNING:
                 self._push(alert, Stage.UPGRADE, now)
         elif level < alert.level:
             if alert.notified and level < AlertLevel.WARNING <= alert.level:

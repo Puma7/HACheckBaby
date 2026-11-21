@@ -89,7 +89,9 @@ Endet dieselbe Warnung und kommt innerhalb von 120 Sekunden wieder, wird sie ohn
 
 Kritische Alarme werden nie durch Schlummern oder die 120-Sekunden-Regel zurückgehalten.
 
-Der lokale Alarm wird wieder ausgeschaltet, sobald keine Warnung und kein kritischer Alarm mehr unbeantwortet ist.
+Der lokale Alarm folgt dem Stand der Alarme. Er ist an, solange ein unbeantworteter Alarm die lokale Stufe erreicht hat, und er wird ausgeschaltet, sobald dieser Alarm quittiert, geschlummert oder vorbei ist.
+
+Ein lokaler Alarm, der schon an ist, bleibt an, wenn seine Warnung kritisch wird.
 
 ### Beispiel: Weinen, auf das niemand reagiert
 
@@ -100,7 +102,7 @@ Mit den Standardwerten, gezählt ab dem Moment, in dem Frigate Weinen meldet:
 | 8 s | Der Zustand wird „Weint". |
 | 15 s | Warnung an das Handy, das Dienst hat. |
 | 75 s | Lokaler Alarm an. |
-| 195 s | Der Alarm wird kritisch: Benachrichtigung an alle Handys. |
+| 195 s | Der Alarm wird kritisch: Benachrichtigung an alle Handys. Der lokale Alarm bleibt an. |
 | danach alle 30 s | Die kritische Benachrichtigung wird wiederholt. |
 
 Die Wiederholung an alle Handys nach 180 Sekunden fällt hier mit dem Schritt zu kritisch zusammen; du siehst also eine Benachrichtigung, nicht zwei.
@@ -118,10 +120,10 @@ Die Wiederholung an alle Handys nach 180 Sekunden fällt hier mit dem Schritt zu
 **5 min Ruhe** (Knopf in der Benachrichtigung, Tasten-Entität oder Aktion `checkbaby.snooze` mit 1 bis 120 Minuten) hält Warnungen zurück.
 
 - Angezeigte Warnungen verschwinden von den Handys; neue Warnungen werden nicht gesendet.
-- Ein lokaler Alarm, der schon an ist, bleibt an, und der Binärsensor „Unbeantworteter Alarm" bleibt an. Nur „Gesehen" schaltet den lokalen Alarm aus.
-- **Bekanntes Problem in dieser Version:** Wählst du „5 min Ruhe", nachdem der lokale Alarm angegangen ist, und endet die Ursache dann während der Ruhezeit von selbst, wird der lokale Alarm gar nicht mehr ausgeschaltet. Nimm „Gesehen", sobald der lokale Alarm an ist. Bleibt er an, schalte ihn von Hand aus, oder drücke „Testalarm" und danach „Gesehen".
-- Ist die Zeit um, werden Warnungen gesendet, die noch aktiv und unbeantwortet sind.
-- **Kritische Alarme kommen trotzdem durch.** Das gilt auch für eine Wein-Warnung, die kritisch wird: Hat das Weinen vor mehr als 180 Sekunden begonnen und hat niemand quittiert, kommt der kritische Alarm während der Ruhezeit an. Wenn du das Kind gehört hast und das nicht willst, nimm „Gesehen".
+- Ein lokaler Alarm, der wegen einer Warnung an ist, wird ausgeschaltet. Der Binärsensor „Unbeantworteter Alarm" bleibt an, weil die Warnung weiter unbeantwortet ist.
+- Ist die Zeit um, werden Warnungen, die noch aktiv und unbeantwortet sind, erneut gesendet, an das Handy im Dienst. Die Schritte, deren Zeit schon abgelaufen ist, folgen binnen Sekunden: die Wiederholung an alle Handys, wenn die Warnung älter als 180 Sekunden ist, und der lokale Alarm bei Weinen und „Bett verlassen", wenn sie älter als 60 Sekunden ist.
+- **Eine Wein-Warnung wird während der Ruhezeit nicht kritisch.** Schlummern zählt als Antwort: Die 180 Sekunden für „niemand reagiert" beginnen, wenn die Ruhezeit endet. Weint das Kind dann noch und quittiert niemand, wird der Alarm 180 Sekunden später kritisch.
+- **Andere kritische Alarme kommen trotzdem durch.** Schlummern hält nie einen Alarm zurück, der kritisch ist, zum Beispiel Rauch, eine Störung der Überwachung, die fünf Minuten anhält, oder einen Wein-Alarm, der schon kritisch war. Ein lokaler Alarm, der wegen eines kritischen Alarms an ist, bleibt an.
 
 ## Wer Dienst hat
 
@@ -150,7 +152,7 @@ Ein Babyphone, das still ausfällt, ist schlimmer als keins. Jede Quelle, die de
 | `mqtt` | Frigate-Kamera oder Vital-Engine | MQTT ist nicht eingerichtet oder nicht verbunden. |
 | `frigate` | Frigate-Kamera | Frigate meldet nicht `online`. |
 | `audio_level` | Frigate-Kamera, oder Geräuschpegel-Sensor ohne Frigate | Länger als 60 Sekunden kein Geräuschpegel, oder der Pegelsensor hat keinen Wert. |
-| `microphone` | Es gibt eine Pegelquelle | Der Pegel hat sich 10 Minuten lang überhaupt nicht verändert. |
+| `microphone` | Frigate-Kamera | Der Pegel aus Frigate hat sich 10 Minuten lang überhaupt nicht verändert. Ein Geräuschpegel aus einer Sensor-Entität ist ausgenommen, weil ein solcher Wert zu Recht gleich bleiben kann. |
 | `cry_sensor` | Wein-Sensor ohne Frigate | Der Wein-Sensor ist nicht verfügbar. |
 | `camera` | Kamera-Entität gesetzt | Die Kamera-Entität fehlt oder ist nicht verfügbar. |
 | `engine` | ID der Vital-Engine gesetzt | Die Vital-Engine ist offline oder seit mehr als 30 Sekunden stumm. |
@@ -197,12 +199,12 @@ Solange er an ist:
 
 - Der Zustand zeigt „Unbekannt".
 - Es entstehen keine Alarme, und es wird nichts gesendet, mit einer Ausnahme: Rauch und CO.
-- Die automatische KI-Bewertung und die Ton-Weiterleitung halten an. „Ruhezeit" ist aus.
+- Es wird kein Bild an eine KI-Aufgabe gesendet: weder automatisch noch mit der Taste „KI-Check jetzt" oder den Aktionen `checkbaby.assess_now` und `checkbaby.quick_check`.
+- Die Ton-Weiterleitung hält an. „Ruhezeit" ist aus.
 
 Was der Privatmodus **nicht** tut:
 
 - Er schaltet weder die Kamera noch Frigate noch Frigates Aufzeichnung ab. Darauf hat CheckBaby keinen Einfluss.
-- Er hält die Taste „KI-Check jetzt" und die Aktion `checkbaby.assess_now` nicht auf. Sind KI-Aufgaben eingerichtet und du drückst sie, wird ein Bild gesendet.
 - Er hält den Herzschlag für einen Dead-Man-Summer nicht an.
 
 ## Was einen Neustart übersteht

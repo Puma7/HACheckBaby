@@ -592,7 +592,7 @@
     },
     "mqtt_missing": {
       "title": "CheckBaby needs MQTT for {child}",
-      "description": "The sleep place uses a Frigate camera or the vital engine, but the MQTT integration is not set up. Set up MQTT, then reload CheckBaby."
+      "description": "The sleep place uses a Frigate camera or the vital engine, but the MQTT integration is not set up. Set up MQTT; CheckBaby then connects by itself."
     }
   },
   "exceptions": {

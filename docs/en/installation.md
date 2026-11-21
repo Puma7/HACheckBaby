@@ -54,11 +54,11 @@ A sleep place is one bed with its camera and sensors. You need a name and a soun
 | Door contact | While the door is open, someone is assumed to be with the child and the child-related alerts pause. |
 | A person seen by the camera counts as a caregiver | Turn on only if Frigate does not detect the child itself as a person. |
 | Presence sensor for the bed | A binary sensor that is on while the child is in bed. |
-| Room temperature, Room humidity | Shown on the device; the temperature is also checked against the range you set. The sensor must report degrees Celsius. |
+| Room temperature, Room humidity | Shown on the device; the temperature is also checked against the range you set. The sensor may report degrees Celsius or Fahrenheit; Fahrenheit is converted before the comparison. |
 | Breathing rate sensor (radar), Heart rate sensor (radar) | See [Vital sources](vital-sources.md). |
 | Vital engine ID | Only with the CheckBaby vital engine, see [Vital sources](vital-sources.md). |
 | Audio stream address | Played on a speaker by the audio relay, for example an audio stream from go2rtc. |
-| Crying sensor, Motion sensor, Sound level sensor | The alternative to Frigate. Do not fill these in together with a Frigate camera name. |
+| Crying sensor, Motion sensor, Sound level sensor | The alternative to Frigate. They are ignored while a Frigate camera name is set. |
 
 ### Step 3: who is told
 

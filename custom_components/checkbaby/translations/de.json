@@ -592,7 +592,7 @@
     },
     "mqtt_missing": {
       "title": "CheckBaby braucht MQTT für {child}",
-      "description": "Der Schlafplatz nutzt eine Frigate-Kamera oder die Vital-Engine, aber die MQTT-Integration ist nicht eingerichtet. Richte MQTT ein und lade CheckBaby neu."
+      "description": "Der Schlafplatz nutzt eine Frigate-Kamera oder die Vital-Engine, aber die MQTT-Integration ist nicht eingerichtet. Richte MQTT ein; CheckBaby verbindet sich dann von selbst."
     }
   },
   "exceptions": {

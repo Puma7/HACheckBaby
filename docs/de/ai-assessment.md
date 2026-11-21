@@ -64,7 +64,9 @@ Automatische Bewertungen brauchen all das: Überwachung an, Privatmodus aus, Sch
 
 Es läuft immer nur eine Bewertung gleichzeitig.
 
-Eine Bewertung von Hand wird ausgeführt, sobald KI-Aufgaben, Einwilligung und eine Kamera-Entität eingerichtet sind. Sie beachtet weder den Schalter „KI-Bewertung" noch das Budget, den Privatmodus oder die Frage, ob die Überwachung an ist. Solange die Überwachung aus oder der Privatmodus an ist, wird ihr Ergebnis angezeigt, löst aber keinen Alarm aus.
+Eine Bewertung von Hand wird ausgeführt, sobald KI-Aufgaben, Einwilligung und eine Kamera-Entität eingerichtet sind und der Privatmodus aus ist. Sie beachtet weder den Schalter „KI-Bewertung" noch das Budget oder die Frage, ob die Überwachung an ist. Solange die Überwachung aus ist, wird ihr Ergebnis angezeigt, löst aber keinen Alarm aus.
+
+**Im Privatmodus wird gar keine Bewertung ausgeführt, auch keine von Hand.** Es wird kein Bild gesendet; die Taste tut nichts, und die Aktion gibt ein leeres Ergebnis zurück.
 
 ## Budget, Zeitlimit und Ausweichkette
 
@@ -93,7 +95,7 @@ Die KI kann nur vier eigene Alarme anlegen, ändern und löschen: **Risiko für 
 
 Allein, mit einem einzigen Bild, erreicht die KI also höchstens eine Warnung. Kritisch braucht zwei Bewertungen in Folge, die dieselbe definierte Gefahr sehen.
 
-Ein KI-Alarm endet, wenn eine spätere Bewertung seine Ursache nicht mehr meldet, und er sinkt auf eine niedrigere Stufe, wenn eine spätere Bewertung die Ursache als weniger ernst meldet. Eine Ausnahme: Eine Bewertung, die nicht sicher ist und gar nichts meldet, kann eine KI-Warnung oder einen kritischen KI-Alarm nicht zurücknehmen. Die KI-Alarme werden außerdem gelöscht, wenn die Überwachung ausgeschaltet, der Privatmodus eingeschaltet wird oder jemand beim Kind ist.
+Ein KI-Alarm endet, wenn eine spätere Bewertung seine Ursache nicht mehr meldet, und er sinkt auf eine niedrigere Stufe, wenn eine spätere Bewertung die Ursache als weniger ernst meldet. Ein sicheres „possible" nach einem „likely" zum Beispiel stuft eine Atemwegs-Warnung zum Hinweis herab, und die Benachrichtigung wird dann von den Handys entfernt. Eine Ausnahme schützt vor einem unsicheren Blick: Eine Bewertung, die nicht sicher ist, beendet einen KI-Alarm auf Stufe Warnung oder höher nicht und stuft ihn auch nicht herab. Die KI-Alarme werden außerdem gelöscht, wenn die Überwachung ausgeschaltet, der Privatmodus eingeschaltet wird oder jemand beim Kind ist.
 
 Einmal ausgelöst, verhält sich ein KI-Alarm wie jeder andere Alarm seiner Stufe: Ein kritischer geht an alle Handys, wiederholt sich alle 30 Sekunden und schaltet nach einer Minute den lokalen Alarm ein, bis jemand auf „Gesehen" tippt (siehe [So funktioniert es](how-it-works.md#die-drei-alarmstufen)). Die nächste Routinebewertung kann bis zum eingestellten Abstand entfernt sein; quittiere also selbst, nachdem du nachgesehen hast.
 
@@ -104,6 +106,6 @@ Einmal ausgelöst, verhält sich ein KI-Alarm wie jeder andere Alarm seiner Stuf
 - **Prüfe die Bedingungen deines Anbieters.** Je nach Tarif kann ein Anbieter eingesandte Bilder zum Training seiner Modelle verwenden. Prüfe bei Gemini, ob du einen bezahlten Tarif nutzt und was er dazu sagt.
 - **CheckBaby speichert keine Bilder.** Es behält die letzte Antwort im Arbeitsspeicher (die Felder und den einen Satz) und zeigt sie in den Sensoren „KI-Bewertung" und „Lage". Der Satz erscheint in Benachrichtigungen. Das geplante Fehlersuch-Archiv für Bilder ist nicht umgesetzt.
 - **Home Assistant kann den Satz in seinem Verlauf behalten**, weil er ein Attribut des Sensors „KI-Bewertung" ist.
-- **Der Privatmodus hält die automatischen Bewertungen an**, nicht die von Hand.
+- **Der Privatmodus hält jede Bewertung an**, die automatischen und die von Hand. Solange er an ist, wird kein Bild an eine KI-Aufgabe gesendet.
 
 Siehe auch [Sicherheit und Datenschutz](safety-and-privacy.md).

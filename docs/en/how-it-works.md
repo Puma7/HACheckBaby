@@ -89,7 +89,9 @@ If the same warning ends and comes back within 120 seconds, it becomes active ag
 
 Critical alerts are never held back by snooze or by the 120-second rule.
 
-The local alarm is switched off again when no warning or critical alert is unanswered any more.
+The local alarm follows the state of the alerts. It is on while an unanswered alert has reached the local step, and it is switched off as soon as that alert is acknowledged, snoozed or over.
+
+A local alarm that is already on stays on when its warning becomes critical.
 
 ### Example: crying that nobody answers
 
@@ -100,7 +102,7 @@ With the default settings, counted from the moment Frigate reports crying:
 | 8 s | State becomes "Crying". |
 | 15 s | Warning to the phone on duty. |
 | 75 s | Local alarm on. |
-| 195 s | The alert becomes critical: notification to all phones. |
+| 195 s | The alert becomes critical: notification to all phones. The local alarm stays on. |
 | every 30 s after that | The critical notification is repeated. |
 
 The repeat to all phones after 180 seconds coincides with the step to critical here, so you see one notification, not two.
@@ -118,10 +120,10 @@ The repeat to all phones after 180 seconds coincides with the step to critical h
 **Quiet for 5 min** (button on the notification, button entity, or action `checkbaby.snooze` with 1 to 120 minutes) holds warnings back.
 
 - Warnings that are showing are removed from the phones; new warnings are not sent.
-- A local alarm that is already on stays on, and the binary sensor "Unanswered alert" stays on. Only "Seen" switches the local alarm off.
-- **Known problem in this version:** if you choose "Quiet for 5 min" after the local alarm has come on, and the cause then ends by itself during the quiet time, the local alarm is not switched off at all. Once the local alarm is on, use "Seen". If it is left on, switch it off by hand, or press "Test alert" and then "Seen".
-- When the time is over, warnings that are still active and unanswered are sent.
-- **Critical alerts come through regardless.** That includes a crying warning that turns critical: if the crying started more than 180 seconds ago and nobody acknowledged it, the critical alert arrives during the quiet time. If you have heard the child and do not want that, use "Seen" instead.
+- A local alarm that is on because of a warning is switched off. The binary sensor "Unanswered alert" stays on, because the warning is still unanswered.
+- When the time is over, warnings that are still active and unanswered are sent again, to the phone on duty. The steps whose time has already passed follow within seconds: the repeat to all phones if the warning is older than 180 seconds, and the local alarm for crying and "left the bed" if it is older than 60 seconds.
+- **A crying warning does not turn critical during the quiet time.** Snoozing counts as an answer: the 180 seconds of "nobody reacts" start when the quiet time ends. If the child still cries then and nobody acknowledges, the alert becomes critical 180 seconds later.
+- **Other critical alerts come through regardless.** Snooze never holds back an alert that is critical, for example smoke, a monitoring failure that has lasted five minutes, or a crying alert that was already critical. A local alarm that is on because of a critical alert stays on.
 
 ## On duty
 
@@ -150,7 +152,7 @@ A monitor that fails silently is worse than none. Every source that the active s
 | `mqtt` | Frigate camera or vital engine | MQTT is not set up or not connected. |
 | `frigate` | Frigate camera | Frigate does not report `online`. |
 | `audio_level` | Frigate camera, or a sound level sensor without Frigate | No sound level for more than 60 seconds, or the level sensor has no value. |
-| `microphone` | A level source exists | The level has not changed at all for 10 minutes. |
+| `microphone` | Frigate camera | The level from Frigate has not changed at all for 10 minutes. A sound level read from a sensor entity is exempt, because such a value may legitimately stay constant. |
 | `cry_sensor` | Crying sensor without Frigate | The crying sensor is unavailable. |
 | `camera` | Camera entity set | The camera entity is missing or unavailable. |
 | `engine` | Vital engine ID set | The vital engine is offline or silent for more than 30 seconds. |
@@ -197,12 +199,12 @@ While it is on:
 
 - The state shows "Unknown".
 - No alerts are raised and nothing is sent, with one exception: smoke and CO.
-- The automatic AI assessment and the audio relay stop. "Quiet time" is off.
+- No image is sent to an AI task: neither automatically nor with the button "AI check now" or the actions `checkbaby.assess_now` and `checkbaby.quick_check`.
+- The audio relay stops. "Quiet time" is off.
 
 What privacy mode does **not** do:
 
 - It does not switch off the camera, Frigate or Frigate's recording. CheckBaby has no control over them.
-- It does not stop the button "AI check now" or the action `checkbaby.assess_now`. If AI tasks are configured and you press it, an image is sent.
 - It does not stop the heartbeat for a dead-man buzzer.
 
 ## What survives a restart

@@ -21,8 +21,11 @@ Enter a sensor under **Breathing rate sensor (radar)** in the sleep place. Check
 | A number other than zero | Usable, breathing movement seen. The number is shown as "Breathing rate (estimate)". |
 | Zero | Usable, no breathing movement seen. |
 | `unavailable`, `unknown`, not a number, or the entity is missing | Not usable. The watchdog reports `vital_sensor`. |
+| Any value that the sensor has not reported again for 120 seconds | Not usable, as above. A sensor that died while showing a rate would otherwise look like one that still measures it. |
 
 Only the distinction "zero or not" enters the rule. The rate itself is displayed and not judged, because nobody knows yet whether a module built for adults reports plausible rates for a newborn.
+
+The 120 seconds count from the last time the sensor reported, also if it reported the same value again. A sensor that only reports when its value changes, and holds a constant rate for two minutes, therefore shows up as the problem `vital_sensor`; the same goes for a filter in the sensor's own configuration that suppresses repeated values. "Breathing movement" is unknown during that time.
 
 Any entity with a numeric breathing rate fits here, whatever its manufacturer. A radar source never reports body movement to CheckBaby; movement comes from the camera.
 
@@ -62,16 +65,27 @@ The plan describes this contract with German names; the names above are the ones
 2. The state is neither "Attended" nor "Not in bed", and the presence sensor does not say the bed is empty.
 3. The camera reports no movement, and neither crying nor screaming is heard. Any of these is a sign of life and rules the alert out.
 4. At least one vital source is usable right now.
-5. That source **has seen breathing movement or body movement before**. A source that has never seen the child cannot say that something stopped.
-6. Since then, and for as long as its signal has been usable without a break, it has seen neither for the configured time (number "No breathing movement before an alert", 20 to 60 seconds, default 20).
+5. That source **has seen breathing movement before**. A source that has never seen the child breathe cannot say that something stopped.
+6. **That source has seen breathing movement at least 10 seconds after the last large movement.** A large movement is: the camera reports movement (Frigate's motion or your motion sensor; the moment it ends counts too), or a vital source reports body movement (the engine's `gross_motion`).
+7. Since it last saw breathing movement, and for as long as its signal has been usable without a break, the source has seen neither breathing movement nor body movement for the configured time (number "No breathing movement before an alert", 20 to 60 seconds, default 20).
 
 The alert is critical. It ends as soon as a source sees movement again or one of the conditions no longer holds.
+
+While the state is "Attended", every source forgets that it has seen breathing movement. After the person has left, each source has to see breathing movement anew before its silence can count.
+
+### Silence after a large movement is not counted
+
+Point 6 exists because of the most common false alarm: you lift the child out of bed. That is a large movement followed by a bed in which nothing breathes, and no source can tell this apart from anything worse. CheckBaby therefore never counts silence that follows a large movement. The source has to see breathing movement again first.
+
+**The price, stated plainly: if breathing movement stops directly after a large movement, before the source has seen breathing again, the hint does not notice it.** With the vital engine that window is at least the roughly 12 seconds it reports `gross_motion` after any larger movement, plus the time until it reports `periodic` again. A child that moves and then lies still under a thick sleeping bag, so that the source never sees breathing again, is not covered at all until breathing is seen again.
 
 ### What never counts as "no movement"
 
 - A source that is unavailable, offline or reports "unusable".
 - A reading that is older than 15 seconds.
-- A source that has not yet seen the child breathe or move.
+- A source that has not yet seen the child breathe.
+- Silence after a large movement, until the source has seen breathing movement again.
+- Silence after someone was with the child, until the source has seen breathing movement again.
 - The time while the signal was unusable: when a signal comes back, the count starts again from that moment.
 
 In all these cases the rule stays silent. While no source is usable at all, the binary sensor "Breathing movement" shows **unknown**. That is deliberate: an unusable signal is a visible state, not an alert, and never "all fine". It also means that the hint can be blind for long stretches without telling you by a notification. Look at the sensor.
@@ -108,10 +122,11 @@ Newborns breathe irregularly. Pauses of up to about ten seconds are part of norm
 - **Lying on the side with the back to the camera**, a flat camera angle and infrared noise at night weaken the video signal.
 - **A fan or a mobile in the region** the engine looks at produces a periodic movement of its own.
 - **Radar modules are designed for adults** at up to 1.5 m. A newborn has a much smaller chest, breathes 30 to 60 times a minute and has a pulse of 100 to 160. Whether a module's firmware reports plausible values for that, or cuts the range off, is not documented anywhere and has to be measured.
-- **An empty bed looks like a child that does not move.** A radar that reports zero and an engine that reports `no_motion` say the same for both. If you lift the child out and leave the room while Monitoring is on, the rule can hold about 20 seconds after you have gone. A door contact only pauses it while the door is open and for 20 seconds after. Only a presence sensor for the bed tells CheckBaby that the bed is empty; without one, switch Monitoring off or privacy mode on when you take the child out. What the radar modules actually report for an empty bed has not been measured.
+- **A stop of breathing movement directly after a large movement is not detected** until the source has seen breathing movement again. See [above](#silence-after-a-large-movement-is-not-counted).
+- **An empty bed looks like a child that does not move.** A radar that reports zero and an engine that reports `no_motion` say the same for both. Lifting the child out normally does not raise the alert, because it is a large movement and because the sources forget what they saw while someone is with the child. This protection has gaps: it needs the movement to be seen (a sleep place with only a radar, without camera motion and without a door contact, has no such signal), and breathing movement only counts as seen again when a source reports it at least 10 seconds after the last large movement, because a radar can keep showing its last rate for a few seconds after the child is gone. A radar that holds a stale rate for longer than that can still make the rule hold. A presence sensor for the bed remains the reliable way to tell CheckBaby that the bed is empty. What the radar modules actually report for an empty bed, and how fast, has not been measured.
 - **A pan-tilt camera that was moved** no longer shows the region the engine was set up for.
 - **A moving pet, a curtain or a parent's arm** can count as a sign of life.
-- **Every source can be late.** The rule adds its 20 seconds or more on top of whatever delay the source has. The vital engine judges a window of up to 25 seconds, so it reports `no_motion` only some time after a movement has stopped; according to its README the hint can be 40 seconds or more behind the event.
+- **Every source can be late.** The rule adds its 20 seconds or more on top of whatever delay the source has. The vital engine judges a window of up to 25 seconds, so it reports `no_motion` only some time after breathing movement has stopped: 18 to 21 seconds in its tests with artificial signals. Over the camera path the hint is therefore roughly 40 seconds or more behind the event.
 - **The vital engine only reports rates between 18 and 90 per minute** as breathing movement, and after any larger movement it reports `gross_motion` for about 12 seconds before it can judge again.
 
 ## Hardware notes

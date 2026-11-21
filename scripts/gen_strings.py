@@ -180,7 +180,7 @@ EN = {
  "svc.night_report.notify": "Send as notification", "svc.night_report.notify.desc": "Also send the summary to whoever is on duty.",
  "issue.no_alert_target": "CheckBaby cannot alert anyone for {child}", "issue.no_alert_target.desc": "Neither a phone nor a local alarm is configured. Open the options of the CheckBaby entry and choose at least one.",
  "issue.no_sleep_place": "No sleep place is set up for {child}", "issue.no_sleep_place.desc": "Without a sleep place there is nothing to monitor. Add one to the CheckBaby entry.",
- "issue.mqtt_missing": "CheckBaby needs MQTT for {child}", "issue.mqtt_missing.desc": "The sleep place uses a Frigate camera or the vital engine, but the MQTT integration is not set up. Set up MQTT, then reload CheckBaby.",
+ "issue.mqtt_missing": "CheckBaby needs MQTT for {child}", "issue.mqtt_missing.desc": "The sleep place uses a Frigate camera or the vital engine, but the MQTT integration is not set up. Set up MQTT; CheckBaby then connects by itself.",
  "exc.entry_required": "Choose the child: no CheckBaby entry is loaded, or more than one.",
 }
 
@@ -267,7 +267,7 @@ DE = {
  "svc.night_report.notify": "Als Benachrichtigung senden", "svc.night_report.notify.desc": "Die Zusammenfassung zusätzlich an die Person im Dienst senden.",
  "issue.no_alert_target": "CheckBaby kann für {child} niemanden alarmieren", "issue.no_alert_target.desc": "Es ist weder ein Handy noch ein lokaler Alarm eingerichtet. Öffne die Optionen des CheckBaby-Eintrags und wähle mindestens eines.",
  "issue.no_sleep_place": "Für {child} ist kein Schlafplatz eingerichtet", "issue.no_sleep_place.desc": "Ohne Schlafplatz gibt es nichts zu überwachen. Füge dem CheckBaby-Eintrag einen hinzu.",
- "issue.mqtt_missing": "CheckBaby braucht MQTT für {child}", "issue.mqtt_missing.desc": "Der Schlafplatz nutzt eine Frigate-Kamera oder die Vital-Engine, aber die MQTT-Integration ist nicht eingerichtet. Richte MQTT ein und lade CheckBaby neu.",
+ "issue.mqtt_missing": "CheckBaby braucht MQTT für {child}", "issue.mqtt_missing.desc": "Der Schlafplatz nutzt eine Frigate-Kamera oder die Vital-Engine, aber die MQTT-Integration ist nicht eingerichtet. Richte MQTT ein; CheckBaby verbindet sich dann von selbst.",
  "exc.entry_required": "Bitte das Kind wählen: Es ist kein CheckBaby-Eintrag geladen, oder mehr als einer.",
 }
 

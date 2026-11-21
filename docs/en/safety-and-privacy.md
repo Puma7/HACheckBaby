@@ -81,7 +81,7 @@ With a cloud provider, an image of your child and its bed leaves your home with 
 
 In the first months the child usually sleeps in the parents' bedroom, and so the camera hangs there too.
 
-- Use **privacy mode** for moments in front of the camera. Be aware of its limit: it pauses CheckBaby's detection and notifications. It does not switch off the camera or Frigate's recording.
+- Use **privacy mode** for moments in front of the camera. While it is on, CheckBaby's detection and notifications pause and no image is sent to an AI task, not even on request. Be aware of its limit: it does not switch off the camera or Frigate's recording.
 - Set Frigate to record **nothing or only for a short time** for this camera.
 
 ### Recording other people's speech

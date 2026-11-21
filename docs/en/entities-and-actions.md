@@ -90,7 +90,7 @@ In automations and dashboards, check the real IDs on the device page before you 
 | Seen | `button.baby_seen` | Acknowledges all active alerts. |
 | Quiet for 5 minutes | `button.baby_quiet_for_5_minutes` | Holds warnings back for five minutes. |
 | Quick check | `button.baby_quick_check` | Sends a one- or two-sentence summary to the phone on duty. |
-| AI check now | `button.baby_ai_check_now` | Asks the AI about a fresh camera image, regardless of the switch "AI assessment", the budget and privacy mode. |
+| AI check now | `button.baby_ai_check_now` | Asks the AI about a fresh camera image, regardless of the switch "AI assessment", the budget and whether Monitoring is on. Does nothing while privacy mode is on. |
 | Send night report | `button.baby_send_night_report` | Sends the night report to the phone on duty. |
 | Test alert | `button.baby_test_alert` | Diagnostic. Starts a critical test alert. |
 
@@ -114,12 +114,12 @@ Every action accepts the optional field `config_entry_id` (shown as "Child"). Yo
 | `checkbaby.start_sleep` | – | Sets the state to "Asleep" now. | Nothing |
 | `checkbaby.end_sleep` | – | Sets the state to "Awake" now. | Nothing |
 | `checkbaby.assess_now` | – | Asks the configured AI tasks about a fresh camera image. | `assessment` |
-| `checkbaby.quick_check` | `with_ai` (default false): take a fresh AI look first. `notify` (default false): also send the summary to the phone on duty. | Reports how the child is right now. | See below |
+| `checkbaby.quick_check` | `with_ai` (default false): take a fresh AI look first (skipped while privacy mode is on). `notify` (default false): also send the summary to the phone on duty. | Reports how the child is right now. | See below |
 | `checkbaby.night_report` | `notify` (default false) | Reports the night since the most recent 18:00. | See below |
 
 ### What `assess_now` returns
 
-`assessment` is empty (`null`) if no AI task is configured, consent is missing, the sleep place has no camera entity, another assessment is running, or no AI task gave a usable answer. Otherwise it contains:
+`assessment` is empty (`null`) if no AI task is configured, consent is missing, the sleep place has no camera entity, privacy mode is on, another assessment is running, or no AI task gave a usable answer. Otherwise it contains:
 
 | Key | Value |
 |---|---|
@@ -143,12 +143,12 @@ Every action accepts the optional field `config_entry_id` (shown as "Child"). Yo
 | `state_text` | The state in words, in the language of your Home Assistant |
 | `alert_level` | `none`, `info`, `warning`, `critical` |
 | `alert` | The alert reason, or empty |
-| `asleep_minutes` | Minutes since the current sleep began, or empty |
+| `asleep_minutes` | Minutes since the current sleep began; empty unless the state is "Asleep" or "Restless" |
 | `noise_level` | Latest sound level in dBFS, or empty |
 | `breathing_movement` | true, false, or empty if no vital source is usable |
 | `problems` | List of monitoring problems |
 | `assessment`, `assessment_reason` | Verdict and sentence of the last AI assessment, or empty |
-| `summary` | One or two sentences, for example "baby: asleep. Asleep for 42 min." |
+| `summary` | One or two sentences, for example "baby: asleep. Asleep for 42 min." The part about the sleep time only appears while the state is "Asleep" or "Restless". |
 
 A voice command "How is the baby?" is not built in. You can call `checkbaby.quick_check` from a script and let your voice assistant speak `summary`.
 

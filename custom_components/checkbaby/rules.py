@@ -125,7 +125,8 @@ def evaluate(ctx: RuleContext) -> list[Desired]:
     room = climate_level(signals.temperature, settings.temp_min, settings.temp_max)
     climate_for = ctx.durations.held("climate", room is not AlertLevel.NONE, now)
     if room is not AlertLevel.NONE and climate_for >= CLIMATE_HOLD_S:
-        desired.append(Desired(AlertKind.CLIMATE, room, {"temperature": signals.temperature}))
+        temperature = round(signals.temperature, 1) if signals.temperature is not None else None
+        desired.append(Desired(AlertKind.CLIMATE, room, {"temperature": temperature}))
 
     if signals.pet_in_bed.active:
         desired.append(Desired(AlertKind.PET_IN_BED, AlertLevel.WARNING))

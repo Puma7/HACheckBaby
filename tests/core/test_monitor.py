@@ -362,10 +362,27 @@ def test_silence_after_a_large_movement_is_not_counted() -> None:
     _run_vital(night, 120, breathing=False)
     assert AlertKind.NO_BREATHING not in night.monitor.alerts.active
 
-    # Back in bed and breathing: the hint is live again.
-    _run_vital(night, 10, breathing=True)
+    # Back in bed and breathing for a while: the hint is live again.
+    _run_vital(night, 15, breathing=True)
     _run_vital(night, 22, breathing=False)
     assert AlertKind.NO_BREATHING in night.monitor.alerts.active
+
+
+def test_a_rate_that_lingers_after_the_movement_is_not_breathing_seen_again() -> None:
+    """A radar keeps showing its last rate for a few seconds after the child is lifted out."""
+    night = Night(breathing_alert=True)
+    _run_vital(night, 30, breathing=True)
+    _run_vital(night, 4, breathing=False, moving=True)
+    _run_vital(night, 8, breathing=True)  # stale rate, less than ten seconds after the movement
+    _run_vital(night, 120, breathing=False)
+    assert AlertKind.NO_BREATHING not in night.monitor.alerts.active
+
+
+def test_room_temperature_in_the_alert_is_rounded() -> None:
+    night = Night()
+    night.monitor.signals.temperature = 26.88888888888889
+    night.advance(601)
+    assert night.monitor.alerts.active[AlertKind.CLIMATE].detail == {"temperature": 26.9}
 
 
 def test_camera_movement_before_the_silence_is_not_counted_either() -> None:

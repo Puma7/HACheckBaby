@@ -50,7 +50,7 @@ Solange ein Schlafplatz eine Frigate-Kamera nutzt, werden diese Quellen überwac
 | `mqtt` | Die MQTT-Integration ist nicht geladen oder nicht mit dem Broker verbunden. |
 | `frigate` | `<präfix>/available` meldet nicht `online`, oder dort kam in den zwei Minuten nach dem Start nichts an. |
 | `audio_level` | Auf `<kamera>/audio/dBFS` kam länger als 60 Sekunden kein Geräuschpegel an. |
-| `microphone` | Pegel kommen an, aber der Wert hat sich zehn Minuten lang überhaupt nicht verändert. Das deutet auf ein totes Mikrofon oder einen stummgeschalteten Stream hin. |
+| `microphone` | Pegel kommen aus Frigate an, aber der Wert hat sich zehn Minuten lang überhaupt nicht verändert. Das deutet auf ein totes Mikrofon oder einen stummgeschalteten Stream hin. |
 
 `mqtt`, `frigate` und `audio_level` sind Kernquellen. Solange eine davon gestört ist, weiß CheckBaby nicht, wie es dem Kind geht, und der Zustand zeigt „Unbekannt" statt „Schläft".
 
@@ -66,8 +66,8 @@ Ein Schlafplatz kann stattdessen gewöhnliche Home-Assistant-Entitäten nutzen. 
 
 CheckBaby liest diese Entitäten alle zwei Sekunden und sofort, wenn sich der Wein- oder Bewegungssensor ändert. Die Ausfallüberwachung meldet `cry_sensor`, wenn der Wein-Sensor nicht verfügbar ist, und `audio_level`, wenn der Pegelsensor keinen Zahlenwert hat; in beiden Fällen wird der Zustand „Unbekannt".
 
-Der Geräuschpegel-Sensor muss sich bewegen. Bleibt sein Wert zehn Minuten lang exakt gleich, geht CheckBaby von einem toten Mikrofon aus und meldet `microphone`. Ein Sensor, der grob rundet oder selten aktualisiert, löst das in einem ruhigen Raum aus; lass das Feld dann leer.
+Ein Geräuschpegel aus einer Sensor-Entität darf gleich bleiben. Die Prüfung auf ein totes Mikrofon (`microphone`) gilt nur für den Pegel aus Frigate.
 
 Ohne Frigate gibt es kein Schrei-Signal, keine Haustier-Warnung und kein „Person zählt als Betreuung".
 
-**Kombiniere die beiden Wege nicht.** Hat ein Schlafplatz sowohl den Namen einer Frigate-Kamera als auch einen Wein- oder Bewegungssensor, schreiben beide dasselbe Signal, und die Entität überschreibt alle zwei Sekunden den Wert von Frigate. Der Geräuschpegel-Sensor wird ignoriert, sobald der Name einer Frigate-Kamera eingetragen ist.
+**Frigate hat Vorrang.** Sobald ein Schlafplatz den Namen einer Frigate-Kamera hat, werden sein Wein-Sensor, sein Bewegungssensor und sein Geräuschpegel-Sensor ignoriert; Weinen, Bewegung und Pegel kommen dann nur aus Frigate.

@@ -54,11 +54,11 @@ Ein Schlafplatz ist ein Bett mit seiner Kamera und seinen Sensoren. Du brauchst 
 | Türkontakt | Solange die Tür offen ist, gilt jemand als beim Kind, und die kindbezogenen Alarme pausieren. |
 | Eine von der Kamera erkannte Person zählt als Betreuung | Nur einschalten, wenn Frigate das Kind nicht selbst als Person erkennt. |
 | Präsenzsensor für das Bett | Ein Binärsensor, der an ist, solange das Kind im Bett liegt. |
-| Raumtemperatur, Luftfeuchte | Werden am Gerät angezeigt; die Temperatur wird zusätzlich gegen den Bereich geprüft, den du einstellst. Der Sensor muss Grad Celsius melden. |
+| Raumtemperatur, Luftfeuchte | Werden am Gerät angezeigt; die Temperatur wird zusätzlich gegen den Bereich geprüft, den du einstellst. Der Sensor darf Grad Celsius oder Fahrenheit melden; Fahrenheit wird vor dem Vergleich umgerechnet. |
 | Atemraten-Sensor (Radar), Herzraten-Sensor (Radar) | Siehe [Vitalquellen](vital-sources.md). |
 | ID der Vital-Engine | Nur mit der CheckBaby-Vital-Engine, siehe [Vitalquellen](vital-sources.md). |
 | Adresse des Ton-Streams | Wird von der Ton-Weiterleitung auf einem Lautsprecher abgespielt, zum Beispiel ein Ton-Stream aus go2rtc. |
-| Wein-Sensor, Bewegungssensor, Geräuschpegel-Sensor | Die Alternative zu Frigate. Fülle sie nicht zusammen mit dem Namen einer Frigate-Kamera aus. |
+| Wein-Sensor, Bewegungssensor, Geräuschpegel-Sensor | Die Alternative zu Frigate. Sie werden ignoriert, solange der Name einer Frigate-Kamera eingetragen ist. |
 
 ### Schritt 3: wer benachrichtigt wird
 

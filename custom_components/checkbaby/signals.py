@@ -10,6 +10,9 @@ BASELINE_TAU_S = 600.0
 AMBIENT_AFTER_S = 300.0
 # Readings older than this no longer count as a valid vital signal.
 VITAL_STALE_S = 15.0
+# Breathing only counts as seen again once it is reported this long after the
+# last large movement: sensors keep showing their last rate for a few seconds.
+BREATHING_AFTER_MOVEMENT_S = 10.0
 # A level that has not moved at all for this long means a dead microphone.
 FLAT_LEVEL_S = 600.0
 # After the door closes, a caregiver is still assumed present this long.
@@ -69,7 +72,7 @@ class VitalReading:
         """
         if not self.usable(now) or self.last_breathing is None or self.valid_since is None:
             return None
-        if last_gross is not None and last_gross >= self.last_breathing:
+        if last_gross is not None and self.last_breathing < last_gross + BREATHING_AFTER_MOVEMENT_S:
             return None
         if self.breathing or self.moving:
             return 0.0

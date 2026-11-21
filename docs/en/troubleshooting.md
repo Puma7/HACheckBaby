@@ -20,11 +20,11 @@ The names are the ones in the attribute `problems`. In a notification they appea
 | `mqtt` | MQTT disconnected | The MQTT integration is not loaded or has lost the broker. | Check the broker and the MQTT integration. CheckBaby subscribes by itself once MQTT is back. |
 | `frigate` | Frigate offline | `<prefix>/available` does not say `online`, or nothing arrived on it within two minutes after the start. | Check that Frigate is running, that MQTT is enabled in Frigate, and that the topic prefix in the CheckBaby options matches Frigate's `topic_prefix`. |
 | `audio_level` | no sound from the camera | No value on `<prefix>/<camera>/audio/dBFS` for more than 60 seconds. Without Frigate: the sound level sensor has no numeric value. | Check that the stream has an audio track, that the input has the role `audio`, that audio detection is enabled for this camera, and that the "Frigate camera name" is spelled exactly as in Frigate. |
-| `microphone` | microphone signal flat | Levels arrive, but the value has not changed at all for 10 minutes. | The microphone may be dead or muted in the camera's settings. Listen to the stream. With a sound level *sensor* that rounds coarsely, remove it from the sleep place. |
+| `microphone` | microphone signal flat | Levels arrive, but the value has not changed at all for 10 minutes. | The microphone may be dead or muted in the camera's settings. Listen to the stream. This check applies to Frigate's level only, not to a sound level sensor entity. |
 | `cry_sensor` | crying sensor unavailable | Without Frigate: the crying sensor is unavailable or unknown. | Check the device that provides it. |
 | `camera` | camera unavailable | The camera entity does not exist or is unavailable. | Check the camera integration in Home Assistant. Alerts still work; the picture and the AI assessment do not. |
 | `engine` | vital engine offline | The vital engine reported `offline`, or sent no state for more than 30 seconds. | Check that the engine runs, that it reaches the broker, that its ID matches "Vital engine ID" and that its topic prefix is still `checkbaby/engine`. |
-| `vital_sensor` | radar sensor unavailable | The breathing rate sensor has no numeric value. | Check the radar device and its Wi-Fi. |
+| `vital_sensor` | radar sensor unavailable | The breathing rate sensor has no numeric value, or it has not reported for more than 120 seconds. | Check the radar device and its Wi-Fi. If the device is fine, the sensor probably reports only when its value changes: make it report regularly, and remove filters that suppress repeated values. |
 | `notify` | a notification target is missing | A configured phone's notify service does not exist, or neither a phone nor a local alarm is configured. | See [No notification arrives](#no-notification-arrives). |
 | `sleep_place` | no sleep place is active | The entry has no sleep place. | Add one with "Add sleep place". |
 
@@ -38,7 +38,7 @@ In the first two minutes after a start, a source that has simply not reported ye
 |---|---|---|
 | CheckBaby cannot alert anyone for (name) | Neither a phone nor a local alarm is configured. | Open the options of the entry and choose at least one. |
 | No sleep place is set up for (name) | The entry has no sleep place, for example because you deleted the only one. | Add one on the entry with "Add sleep place". |
-| CheckBaby needs MQTT for (name) | The active sleep place uses a Frigate camera or the vital engine, but the MQTT integration is not set up. | Set up MQTT, then reload the CheckBaby entry. The issue is only checked when the entry starts, so it stays until the reload. |
+| CheckBaby needs MQTT for (name) | The active sleep place uses a Frigate camera or the vital engine, but the MQTT integration is not set up. | Set up MQTT. CheckBaby notices within seconds, subscribes to its topics and removes the issue. If the issue stays, reload the CheckBaby entry. |
 
 ## No notification arrives
 
@@ -93,7 +93,7 @@ If it still stays silent, rely on the local alarm and your fallback monitor, and
 5. **The binary sensor "Crying" turns on, but no warning comes:** the crying has to last without a break. Check "Crying before a warning" and "Sensitivity". If Frigate switches `crying` off and on again every few seconds, the count restarts each time; look at Frigate's `max_not_heard`.
 6. **Then check the list under [No notification arrives](#no-notification-arrives).**
 
-If you entered both a Frigate camera name and a crying sensor in the same sleep place, remove one of them; the two overwrite each other.
+If a sleep place has both a Frigate camera name and a crying sensor, only Frigate is used and the crying sensor is ignored. To use the crying sensor, clear the Frigate camera name.
 
 ## The state is "Unknown"
 
@@ -110,7 +110,7 @@ If you entered both a Frigate camera name and a crying sensor in the same sleep 
 
 ## "Breathing movement" stays unknown
 
-No vital source is usable. With a radar: the entity has no numeric state. With the vital engine: it reports `unusable` (covered, too dark, child not in the picture), it is offline, or its messages do not arrive. See [Vital sources](vital-sources.md).
+No vital source is usable. With a radar: the entity has no numeric state, or it has not reported for more than 120 seconds. With the vital engine: it reports `unusable` (covered, too dark, child not in the picture), it is offline, or its messages do not arrive. See [Vital sources](vital-sources.md).
 
 ## The entity IDs in the examples do not exist
 
@@ -118,8 +118,6 @@ The examples use a child named "baby". Your IDs contain your child's name, and o
 
 ## The local alarm does not switch off
 
-The local alarm is switched off when no warning or critical alert is unanswered any more. "Quiet for 5 min" does not do that; tap "Seen".
+The local alarm follows the alerts. It is switched off when the alert that switched it on is acknowledged with "Seen", is over, or, for a warning, is snoozed with "Quiet for 5 min". A local alarm that is on because of a critical alert is not switched off by "Quiet for 5 min"; tap "Seen".
 
-There is a known problem in this version: after "Quiet for 5 min" on a warning whose local alarm was already on, the local alarm stays on even when the cause has ended and no alert is active. "Seen" has nothing to acknowledge then. Switch the alarm off by hand, or press "Test alert" and then "Seen", which switches it off.
-
-If a siren stays on in any other situation, switch it off by hand and send the diagnostics.
+CheckBaby compares the alarm with the alerts every two seconds and also after a restart, so an alarm that was left on is switched off by itself. If a siren stays on although the sensor "Alert level" shows no warning or critical alert, switch it off by hand and send the diagnostics.

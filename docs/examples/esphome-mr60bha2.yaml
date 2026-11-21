@@ -74,11 +74,15 @@ sensor:
       name: Breathing rate
       filters:
         # If the module stops sending a rate, the value turns to "unknown"
-        # after 30 seconds instead of showing the last rate for ever. A stale
-        # rate would look like continued breathing movement to CheckBaby.
-        # Side effect: while it is "unknown", CheckBaby reports the monitoring
-        # problem "vital_sensor". If that happens with an empty bed, you have
-        # learned how the module behaves; decide then whether to keep this.
+        # after 30 seconds instead of showing the last rate. CheckBaby has
+        # the same guard on its side: a rate that has not been reported again
+        # for 120 seconds no longer counts. This filter only makes it faster.
+        # Either way CheckBaby then reports the monitoring problem
+        # "vital_sensor". If that happens with an empty bed, you have learned
+        # how the module behaves; decide then whether to keep this filter.
+        # Do NOT add filters that drop repeated values (delta, or throttle
+        # with a long time): CheckBaby would take the silence for a dead
+        # sensor after two minutes.
         - timeout: 30s
     heart_rate:
       name: Heart rate

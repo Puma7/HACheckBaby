@@ -81,7 +81,7 @@ Bei einem Cloud-Anbieter verlässt mit jeder Bewertung ein Bild deines Kindes un
 
 In den ersten Monaten schläft das Kind meist im Elternschlafzimmer, und damit hängt auch die Kamera dort.
 
-- Nutze den **Privatmodus** für Momente vor der Kamera. Kenne seine Grenze: Er pausiert die Erkennung und die Benachrichtigungen von CheckBaby. Er schaltet weder die Kamera noch die Aufzeichnung von Frigate ab.
+- Nutze den **Privatmodus** für Momente vor der Kamera. Solange er an ist, pausieren die Erkennung und die Benachrichtigungen von CheckBaby, und es wird kein Bild an eine KI-Aufgabe gesendet, auch nicht auf Anforderung. Kenne seine Grenze: Er schaltet weder die Kamera noch die Aufzeichnung von Frigate ab.
 - Stelle Frigate für diese Kamera so ein, dass es **nichts oder nur kurz** aufzeichnet.
 
 ### Tonaufnahmen anderer Personen

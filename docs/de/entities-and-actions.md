@@ -92,7 +92,7 @@ Die Zustandswerte in Klammern (zum Beispiel `asleep`) sind in jeder Sprache glei
 | Gesehen | `button.baby_gesehen` | Quittiert alle aktiven Alarme. |
 | 5 Minuten Ruhe | `button.baby_5_minuten_ruhe` | Hält Warnungen fünf Minuten zurück. |
 | Schnell-Check | `button.baby_schnell_check` | Sendet eine Zusammenfassung in ein oder zwei Sätzen an das Handy im Dienst. |
-| KI-Check jetzt | `button.baby_ki_check_jetzt` | Fragt die KI zu einem frischen Kamerabild, unabhängig vom Schalter „KI-Bewertung", vom Budget und vom Privatmodus. |
+| KI-Check jetzt | `button.baby_ki_check_jetzt` | Fragt die KI zu einem frischen Kamerabild, unabhängig vom Schalter „KI-Bewertung", vom Budget und davon, ob die Überwachung an ist. Tut nichts, solange der Privatmodus an ist. |
 | Nachtbericht senden | `button.baby_nachtbericht_senden` | Sendet den Nachtbericht an das Handy im Dienst. |
 | Testalarm | `button.baby_testalarm` | Diagnose. Startet einen kritischen Testalarm. |
 
@@ -116,12 +116,12 @@ Jede Aktion nimmt das optionale Feld `config_entry_id` an (angezeigt als „Kind
 | `checkbaby.start_sleep` | – | Setzt den Zustand jetzt auf „Schläft". | Nichts |
 | `checkbaby.end_sleep` | – | Setzt den Zustand jetzt auf „Wach". | Nichts |
 | `checkbaby.assess_now` | – | Fragt die eingerichteten KI-Aufgaben zu einem frischen Kamerabild. | `assessment` |
-| `checkbaby.quick_check` | `with_ai` (Standard false): zuerst einen frischen KI-Blick einholen. `notify` (Standard false): die Zusammenfassung zusätzlich an das Handy im Dienst senden. | Meldet, wie es dem Kind gerade geht. | Siehe unten |
+| `checkbaby.quick_check` | `with_ai` (Standard false): zuerst einen frischen KI-Blick einholen (entfällt, solange der Privatmodus an ist). `notify` (Standard false): die Zusammenfassung zusätzlich an das Handy im Dienst senden. | Meldet, wie es dem Kind gerade geht. | Siehe unten |
 | `checkbaby.night_report` | `notify` (Standard false) | Meldet die Nacht seit dem letzten 18:00 Uhr. | Siehe unten |
 
 ### Was `assess_now` zurückgibt
 
-`assessment` ist leer (`null`), wenn keine KI-Aufgabe eingerichtet ist, die Einwilligung fehlt, der Schlafplatz keine Kamera-Entität hat, gerade eine andere Bewertung läuft oder keine KI-Aufgabe eine verwertbare Antwort gegeben hat. Sonst enthält es:
+`assessment` ist leer (`null`), wenn keine KI-Aufgabe eingerichtet ist, die Einwilligung fehlt, der Schlafplatz keine Kamera-Entität hat, der Privatmodus an ist, gerade eine andere Bewertung läuft oder keine KI-Aufgabe eine verwertbare Antwort gegeben hat. Sonst enthält es:
 
 | Schlüssel | Wert |
 |---|---|
@@ -145,12 +145,12 @@ Jede Aktion nimmt das optionale Feld `config_entry_id` an (angezeigt als „Kind
 | `state_text` | Der Zustand in Worten, in der Sprache deines Home Assistant |
 | `alert_level` | `none`, `info`, `warning`, `critical` |
 | `alert` | Der Alarmgrund, oder leer |
-| `asleep_minutes` | Minuten seit Beginn des laufenden Schlafs, oder leer |
+| `asleep_minutes` | Minuten seit Beginn des laufenden Schlafs; leer, außer der Zustand ist „Schläft" oder „Unruhig" |
 | `noise_level` | Letzter Geräuschpegel in dBFS, oder leer |
 | `breathing_movement` | true, false, oder leer, wenn keine Vitalquelle brauchbar ist |
 | `problems` | Liste der Störungen der Überwachung |
 | `assessment`, `assessment_reason` | Urteil und Satz der letzten KI-Bewertung, oder leer |
-| `summary` | Ein oder zwei Sätze, zum Beispiel „baby: schläft. Schläft seit 42 min." |
+| `summary` | Ein oder zwei Sätze, zum Beispiel „baby: schläft. Schläft seit 42 min." Der Teil zur Schlafdauer erscheint nur, solange der Zustand „Schläft" oder „Unruhig" ist. |
 
 Einen eingebauten Sprachbefehl „Wie geht es dem Baby?" gibt es nicht. Du kannst `checkbaby.quick_check` aus einem Skript aufrufen und deinen Sprachassistenten `summary` vorlesen lassen.
 

@@ -20,11 +20,11 @@ Die Namen sind die aus dem Attribut `problems`. In einer Benachrichtigung stehen
 | `mqtt` | MQTT getrennt | Die MQTT-Integration ist nicht geladen oder hat den Broker verloren. | Prüfe den Broker und die MQTT-Integration. CheckBaby abonniert von selbst, sobald MQTT zurück ist. |
 | `frigate` | Frigate offline | `<präfix>/available` meldet nicht `online`, oder dort kam in den zwei Minuten nach dem Start nichts an. | Prüfe, ob Frigate läuft, ob MQTT in Frigate eingeschaltet ist und ob das MQTT-Präfix in den CheckBaby-Optionen zu Frigates `topic_prefix` passt. |
 | `audio_level` | kein Ton von der Kamera | Länger als 60 Sekunden kein Wert auf `<präfix>/<kamera>/audio/dBFS`. Ohne Frigate: Der Geräuschpegel-Sensor hat keinen Zahlenwert. | Prüfe, ob der Stream eine Tonspur hat, ob der Eingang die Rolle `audio` hat, ob die Audio-Erkennung für diese Kamera eingeschaltet ist und ob der „Name der Frigate-Kamera" genau so geschrieben ist wie in Frigate. |
-| `microphone` | Mikrofonsignal flach | Pegel kommen an, aber der Wert hat sich 10 Minuten lang überhaupt nicht verändert. | Das Mikrofon kann tot oder in den Einstellungen der Kamera stummgeschaltet sein. Hör in den Stream hinein. Bei einem Geräuschpegel-*Sensor*, der grob rundet: aus dem Schlafplatz entfernen. |
+| `microphone` | Mikrofonsignal flach | Pegel kommen an, aber der Wert hat sich 10 Minuten lang überhaupt nicht verändert. | Das Mikrofon kann tot oder in den Einstellungen der Kamera stummgeschaltet sein. Hör in den Stream hinein. Diese Prüfung gilt nur für den Pegel aus Frigate, nicht für eine Geräuschpegel-Sensor-Entität. |
 | `cry_sensor` | Wein-Sensor nicht verfügbar | Ohne Frigate: Der Wein-Sensor ist nicht verfügbar oder unbekannt. | Prüfe das Gerät, das ihn liefert. |
 | `camera` | Kamera nicht verfügbar | Die Kamera-Entität existiert nicht oder ist nicht verfügbar. | Prüfe die Kamera-Integration in Home Assistant. Alarme funktionieren weiter; das Bild und die KI-Bewertung nicht. |
 | `engine` | Vital-Engine offline | Die Vital-Engine hat `offline` gemeldet oder seit mehr als 30 Sekunden keinen Zustand gesendet. | Prüfe, ob die Engine läuft, ob sie den Broker erreicht, ob ihre ID zu „ID der Vital-Engine" passt und ob ihr Präfix noch `checkbaby/engine` ist. |
-| `vital_sensor` | Radarsensor nicht verfügbar | Der Atemraten-Sensor hat keinen Zahlenwert. | Prüfe das Radargerät und sein WLAN. |
+| `vital_sensor` | Radarsensor nicht verfügbar | Der Atemraten-Sensor hat keinen Zahlenwert, oder er hat sich seit mehr als 120 Sekunden nicht gemeldet. | Prüfe das Radargerät und sein WLAN. Ist das Gerät in Ordnung, meldet der Sensor vermutlich nur bei einer Änderung seines Werts: Lass ihn regelmäßig melden, und entferne Filter, die wiederholte Werte unterdrücken. |
 | `notify` | ein Benachrichtigungsziel fehlt | Der Benachrichtigungsdienst eines eingerichteten Handys existiert nicht, oder es ist weder ein Handy noch ein lokaler Alarm eingerichtet. | Siehe [Es kommt keine Benachrichtigung an](#es-kommt-keine-benachrichtigung-an). |
 | `sleep_place` | kein Schlafplatz aktiv | Der Eintrag hat keinen Schlafplatz. | Füge mit „Schlafplatz hinzufügen" einen hinzu. |
 
@@ -38,7 +38,7 @@ In den ersten zwei Minuten nach einem Start ist eine Quelle, die sich einfach no
 |---|---|---|
 | CheckBaby kann für (Name) niemanden alarmieren | Es ist weder ein Handy noch ein lokaler Alarm eingerichtet. | Öffne die Optionen des Eintrags und wähle mindestens eines. |
 | Für (Name) ist kein Schlafplatz eingerichtet | Der Eintrag hat keinen Schlafplatz, zum Beispiel weil du den einzigen gelöscht hast. | Füge am Eintrag mit „Schlafplatz hinzufügen" einen hinzu. |
-| CheckBaby braucht MQTT für (Name) | Der aktive Schlafplatz nutzt eine Frigate-Kamera oder die Vital-Engine, aber die MQTT-Integration ist nicht eingerichtet. | Richte MQTT ein und lade den CheckBaby-Eintrag neu. Der Hinweis wird nur beim Start des Eintrags geprüft und bleibt deshalb bis zum Neuladen stehen. |
+| CheckBaby braucht MQTT für (Name) | Der aktive Schlafplatz nutzt eine Frigate-Kamera oder die Vital-Engine, aber die MQTT-Integration ist nicht eingerichtet. | Richte MQTT ein. CheckBaby bemerkt das binnen Sekunden, abonniert seine Themen und entfernt den Hinweis. Bleibt der Hinweis stehen, lade den CheckBaby-Eintrag neu. |
 
 ## Es kommt keine Benachrichtigung an
 
@@ -93,7 +93,7 @@ Bleibt es weiter stumm, verlass dich auf den lokalen Alarm und dein Rückfall-Ba
 5. **Der Binärsensor „Weinen" geht an, aber es kommt keine Warnung:** Das Weinen muss ununterbrochen andauern. Prüfe „Weinen bis zur Warnung" und „Empfindlichkeit". Schaltet Frigate `crying` alle paar Sekunden aus und wieder ein, beginnt die Zählung jedes Mal neu; sieh dir Frigates `max_not_heard` an.
 6. **Prüfe danach die Liste unter [Es kommt keine Benachrichtigung an](#es-kommt-keine-benachrichtigung-an).**
 
-Hast du im selben Schlafplatz sowohl den Namen einer Frigate-Kamera als auch einen Wein-Sensor eingetragen, entferne eines von beiden; die zwei überschreiben sich gegenseitig.
+Hat ein Schlafplatz sowohl den Namen einer Frigate-Kamera als auch einen Wein-Sensor, wird nur Frigate verwendet und der Wein-Sensor ignoriert. Um den Wein-Sensor zu nutzen, leere den Namen der Frigate-Kamera.
 
 ## Der Zustand ist „Unbekannt"
 
@@ -110,7 +110,7 @@ Hast du im selben Schlafplatz sowohl den Namen einer Frigate-Kamera als auch ein
 
 ## „Atembewegung" bleibt unbekannt
 
-Keine Vitalquelle ist brauchbar. Beim Radar: Die Entität hat keinen Zahlenwert. Bei der Vital-Engine: Sie meldet `unusable` (verdeckt, zu dunkel, Kind nicht im Bild), sie ist offline, oder ihre Meldungen kommen nicht an. Siehe [Vitalquellen](vital-sources.md).
+Keine Vitalquelle ist brauchbar. Beim Radar: Die Entität hat keinen Zahlenwert, oder sie hat sich seit mehr als 120 Sekunden nicht gemeldet. Bei der Vital-Engine: Sie meldet `unusable` (verdeckt, zu dunkel, Kind nicht im Bild), sie ist offline, oder ihre Meldungen kommen nicht an. Siehe [Vitalquellen](vital-sources.md).
 
 ## Die Entitäts-IDs aus den Beispielen gibt es nicht
 
@@ -118,8 +118,6 @@ Die Beispiele verwenden ein Kind namens „baby". Deine IDs enthalten den Namen 
 
 ## Der lokale Alarm geht nicht aus
 
-Der lokale Alarm wird ausgeschaltet, sobald keine Warnung und kein kritischer Alarm mehr unbeantwortet ist. „5 min Ruhe" bewirkt das nicht; tippe auf „Gesehen".
+Der lokale Alarm folgt den Alarmen. Er wird ausgeschaltet, wenn der Alarm, der ihn eingeschaltet hat, mit „Gesehen" quittiert wird, vorbei ist oder, bei einer Warnung, mit „5 min Ruhe" geschlummert wird. Einen lokalen Alarm, der wegen eines kritischen Alarms an ist, schaltet „5 min Ruhe" nicht aus; tippe auf „Gesehen".
 
-In dieser Version gibt es ein bekanntes Problem: Nach „5 min Ruhe" bei einer Warnung, deren lokaler Alarm schon an war, bleibt der lokale Alarm an, auch wenn die Ursache vorbei und kein Alarm mehr aktiv ist. „Gesehen" hat dann nichts zu quittieren. Schalte den Alarm von Hand aus, oder drücke „Testalarm" und danach „Gesehen"; das schaltet ihn aus.
-
-Bleibt eine Sirene in einer anderen Lage an, schalte sie von Hand aus und schick die Diagnose.
+CheckBaby gleicht den Alarm alle zwei Sekunden und auch nach einem Neustart mit den Alarmen ab; ein Alarm, der an geblieben ist, wird also von selbst ausgeschaltet. Bleibt eine Sirene an, obwohl der Sensor „Alarmstufe" weder Warnung noch kritischen Alarm zeigt, schalte sie von Hand aus und schick die Diagnose.

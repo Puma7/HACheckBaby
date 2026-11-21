@@ -21,8 +21,11 @@ Trage im Schlafplatz unter **Atemraten-Sensor (Radar)** einen Sensor ein. CheckB
 | Eine Zahl ungleich null | Brauchbar, Atembewegung gesehen. Die Zahl wird als „Atemrate (Schätzung)" angezeigt. |
 | Null | Brauchbar, keine Atembewegung gesehen. |
 | `unavailable`, `unknown`, keine Zahl, oder die Entität fehlt | Nicht brauchbar. Die Ausfallüberwachung meldet `vital_sensor`. |
+| Jeder Wert, den der Sensor seit 120 Sekunden nicht erneut gemeldet hat | Nicht brauchbar, wie oben. Ein Sensor, der ausgefallen ist, während er eine Rate anzeigte, sähe sonst aus wie einer, der sie noch misst. |
 
 In die Regel geht nur die Unterscheidung „null oder nicht" ein. Die Rate selbst wird angezeigt und nicht bewertet, weil noch niemand weiß, ob ein für Erwachsene gebautes Modul bei einem Neugeborenen plausible Raten meldet.
+
+Die 120 Sekunden zählen ab der letzten Meldung des Sensors, auch wenn er denselben Wert noch einmal gemeldet hat. Ein Sensor, der nur bei einer Änderung meldet und zwei Minuten lang eine gleichbleibende Rate hält, erscheint deshalb als Störung `vital_sensor`; dasselbe gilt für einen Filter in der Konfiguration des Sensors, der wiederholte Werte unterdrückt. „Atembewegung" ist in dieser Zeit unbekannt.
 
 Hier passt jede Entität mit einer Atemrate als Zahl, gleich von welchem Hersteller. Eine Radarquelle meldet CheckBaby nie Körperbewegung; Bewegung kommt von der Kamera.
 
@@ -62,16 +65,27 @@ Der Plan beschreibt diesen Vertrag mit deutschen Namen; die Namen oben sind die,
 2. Der Zustand ist weder „Betreut" noch „Nicht im Bett", und der Präsenzsensor meldet kein leeres Bett.
 3. Die Kamera meldet keine Bewegung, und es ist weder Weinen noch Schreien zu hören. Jedes davon ist ein Lebenszeichen und schließt den Alarm aus.
 4. Mindestens eine Vitalquelle ist gerade brauchbar.
-5. Diese Quelle **hat vorher schon Atembewegung oder Körperbewegung gesehen**. Eine Quelle, die das Kind nie gesehen hat, kann nicht sagen, dass etwas aufgehört hat.
-6. Seitdem, und solange ihr Signal ohne Unterbrechung brauchbar ist, hat sie für die eingestellte Zeit keines von beiden gesehen (Zahl „Keine Atembewegung bis zum Alarm", 20 bis 60 Sekunden, Standard 20).
+5. Diese Quelle **hat vorher schon Atembewegung gesehen**. Eine Quelle, die das Kind nie atmen gesehen hat, kann nicht sagen, dass etwas aufgehört hat.
+6. **Diese Quelle hat mindestens 10 Sekunden nach der letzten großen Bewegung Atembewegung gesehen.** Eine große Bewegung ist: Die Kamera meldet Bewegung (Frigates Bewegungserkennung oder dein Bewegungssensor; auch der Moment, in dem sie endet, zählt), oder eine Vitalquelle meldet Körperbewegung (`gross_motion` der Engine).
+7. Seit sie zuletzt Atembewegung gesehen hat, und solange ihr Signal ohne Unterbrechung brauchbar ist, hat die Quelle für die eingestellte Zeit weder Atembewegung noch Körperbewegung gesehen (Zahl „Keine Atembewegung bis zum Alarm", 20 bis 60 Sekunden, Standard 20).
 
 Der Alarm ist kritisch. Er endet, sobald eine Quelle wieder Bewegung sieht oder eine der Bedingungen nicht mehr zutrifft.
+
+Solange der Zustand „Betreut" ist, vergisst jede Quelle, dass sie Atembewegung gesehen hat. Nachdem die Person gegangen ist, muss jede Quelle erst wieder Atembewegung sehen, bevor ihre Stille zählen kann.
+
+### Stille nach einer großen Bewegung zählt nicht
+
+Punkt 6 gibt es wegen des häufigsten Fehlalarms: Du hebst das Kind aus dem Bett. Das ist eine große Bewegung, auf die ein Bett folgt, in dem nichts atmet, und keine Quelle kann das von etwas Schlimmerem unterscheiden. CheckBaby zählt Stille nach einer großen Bewegung deshalb nie. Die Quelle muss erst wieder Atembewegung sehen.
+
+**Der Preis, klar gesagt: Hört die Atembewegung direkt nach einer großen Bewegung auf, bevor die Quelle wieder Atmung gesehen hat, bemerkt der Hinweis das nicht.** Bei der Vital-Engine sind das mindestens die etwa 12 Sekunden, in denen sie nach jeder größeren Bewegung `gross_motion` meldet, dazu die Zeit, bis sie wieder `periodic` meldet. Ein Kind, das sich bewegt und dann still unter einem dicken Schlafsack liegt, sodass die Quelle nie wieder Atmung sieht, ist gar nicht abgedeckt, bis wieder Atmung gesehen wird.
 
 ### Was nie als „keine Bewegung" zählt
 
 - Eine Quelle, die nicht verfügbar oder offline ist oder „unusable" meldet.
 - Ein Messwert, der älter als 15 Sekunden ist.
-- Eine Quelle, die das Kind noch nicht atmen oder sich bewegen gesehen hat.
+- Eine Quelle, die das Kind noch nicht atmen gesehen hat.
+- Stille nach einer großen Bewegung, bis die Quelle wieder Atembewegung gesehen hat.
+- Stille, nachdem jemand beim Kind war, bis die Quelle wieder Atembewegung gesehen hat.
 - Die Zeit, in der das Signal unbrauchbar war: Kommt ein Signal zurück, beginnt die Zählung in diesem Moment neu.
 
 In all diesen Fällen bleibt die Regel still. Solange gar keine Quelle brauchbar ist, zeigt der Binärsensor „Atembewegung" **unbekannt**. Das ist Absicht: Ein unbrauchbares Signal ist ein sichtbarer Zustand, kein Alarm und nie „alles in Ordnung". Es heißt aber auch, dass der Hinweis über lange Strecken blind sein kann, ohne dass dich eine Benachrichtigung darauf hinweist. Schau auf den Sensor.
@@ -108,10 +122,11 @@ Neugeborene atmen unregelmäßig. Pausen bis etwa zehn Sekunden gehören in den 
 - **Seitenlage mit dem Rücken zur Kamera**, ein flacher Kamerawinkel und Bildrauschen bei Infrarot schwächen das Videosignal.
 - **Ein Ventilator oder ein Mobile im Bildausschnitt** der Engine erzeugt eine eigene periodische Bewegung.
 - **Radarmodule sind für Erwachsene** bei bis zu 1,5 m ausgelegt. Ein Neugeborenes hat einen viel kleineren Brustkorb, atmet 30- bis 60-mal pro Minute und hat einen Puls von 100 bis 160. Ob die Firmware eines Moduls dafür plausible Werte liefert oder Bereiche abschneidet, steht in keiner Quelle und muss gemessen werden.
-- **Ein leeres Bett sieht aus wie ein Kind, das sich nicht bewegt.** Ein Radar, das null meldet, und eine Engine, die `no_motion` meldet, sagen für beides dasselbe. Hebst du das Kind heraus und verlässt den Raum, während die Überwachung an ist, kann die Regel etwa 20 Sekunden nach deinem Weggang gelten. Ein Türkontakt pausiert sie nur, solange die Tür offen ist, und 20 Sekunden danach. Nur ein Präsenzsensor für das Bett sagt CheckBaby, dass das Bett leer ist; ohne ihn schalte die Überwachung aus oder den Privatmodus ein, wenn du das Kind herausnimmst. Was die Radarmodule bei leerem Bett tatsächlich melden, wurde nicht gemessen.
+- **Ein Ende der Atembewegung direkt nach einer großen Bewegung wird nicht erkannt**, bis die Quelle wieder Atembewegung gesehen hat. Siehe [oben](#stille-nach-einer-großen-bewegung-zählt-nicht).
+- **Ein leeres Bett sieht aus wie ein Kind, das sich nicht bewegt.** Ein Radar, das null meldet, und eine Engine, die `no_motion` meldet, sagen für beides dasselbe. Das Herausheben des Kindes löst den Alarm normalerweise nicht aus, weil es eine große Bewegung ist und weil die Quellen vergessen, was sie gesehen haben, solange jemand beim Kind ist. Dieser Schutz hat Lücken: Er braucht, dass die Bewegung gesehen wird (ein Schlafplatz nur mit Radar, ohne Kamerabewegung und ohne Türkontakt, hat kein solches Signal), und Atembewegung gilt erst dann als wieder gesehen, wenn eine Quelle sie mindestens 10 Sekunden nach der letzten großen Bewegung meldet, weil ein Radar seine letzte Rate noch ein paar Sekunden anzeigen kann, nachdem das Kind weg ist. Ein Radar, das einen veralteten Wert länger hält, kann die Regel trotzdem gelten lassen. Ein Präsenzsensor für das Bett bleibt der verlässliche Weg, CheckBaby zu sagen, dass das Bett leer ist. Was die Radarmodule bei leerem Bett tatsächlich melden und wie schnell, wurde nicht gemessen.
 - **Eine Schwenkkamera, die bewegt wurde**, zeigt nicht mehr den Ausschnitt, für den die Engine eingerichtet wurde.
 - **Ein Haustier in Bewegung, ein Vorhang oder der Arm eines Elternteils** kann als Lebenszeichen zählen.
-- **Jede Quelle kann verspätet sein.** Die Regel legt ihre 20 Sekunden oder mehr auf die Verzögerung der Quelle obendrauf. Die Vital-Engine beurteilt ein Fenster von bis zu 25 Sekunden und meldet `no_motion` deshalb erst einige Zeit, nachdem eine Bewegung aufgehört hat; laut ihrem README kann der Hinweis 40 Sekunden oder mehr hinter dem Ereignis liegen.
+- **Jede Quelle kann verspätet sein.** Die Regel legt ihre 20 Sekunden oder mehr auf die Verzögerung der Quelle obendrauf. Die Vital-Engine beurteilt ein Fenster von bis zu 25 Sekunden und meldet `no_motion` deshalb erst einige Zeit, nachdem die Atembewegung aufgehört hat: 18 bis 21 Sekunden in ihren Tests mit künstlichen Signalen. Über den Kameraweg liegt der Hinweis deshalb etwa 40 Sekunden oder mehr hinter dem Ereignis.
 - **Die Vital-Engine meldet nur Raten zwischen 18 und 90 pro Minute** als Atembewegung, und nach jeder größeren Bewegung meldet sie etwa 12 Sekunden lang `gross_motion`, bevor sie wieder urteilen kann.
 
 ## Hinweise zur Hardware

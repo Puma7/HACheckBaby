@@ -64,7 +64,9 @@ Automatic assessments need all of this: Monitoring on, privacy mode off, the swi
 
 Only one assessment runs at a time.
 
-A manual assessment is carried out whenever AI tasks, consent and a camera entity are configured. It ignores the switch "AI assessment", the budget, privacy mode and whether Monitoring is on. While Monitoring is off or privacy mode is on, its result is displayed but raises no alert.
+A manual assessment is carried out whenever AI tasks, consent and a camera entity are configured and privacy mode is off. It ignores the switch "AI assessment", the budget and whether Monitoring is on. While Monitoring is off, its result is displayed but raises no alert.
+
+**In privacy mode no assessment is carried out at all, not even a manual one.** No image is sent; the button does nothing and the action returns an empty result.
 
 ## Budget, timeout and fallback
 
@@ -93,7 +95,7 @@ The AI can only create, change and clear four alerts of its own: **Airway risk**
 
 So on its own, with a single image, the AI reaches a warning at most. Critical needs two assessments in a row that see the same defined danger.
 
-An AI alert ends when a later assessment no longer reports its cause, and it drops to a lower level when a later assessment reports the cause as less serious. One exception: an assessment that is not confident and reports nothing at all cannot take back an AI warning or critical alert. The AI alerts are also cleared when Monitoring is switched off, privacy mode is switched on or someone is with the child.
+An AI alert ends when a later assessment no longer reports its cause, and it drops to a lower level when a later assessment reports the cause as less serious. For example, a confident "possible" after a "likely" lowers an airway warning to a hint, and the notification is then removed from the phones. One exception protects against an unsure look: an assessment that is not confident neither ends nor lowers an AI alert that is at warning or above. The AI alerts are also cleared when Monitoring is switched off, privacy mode is switched on or someone is with the child.
 
 Once raised, an AI alert behaves like any other alert of its level: a critical one goes to all phones, repeats every 30 seconds and switches on the local alarm after a minute until someone taps "Seen" (see [How it works](how-it-works.md#the-three-alert-levels)). The next routine assessment may be up to the routine interval away, so acknowledge it yourself after you have checked.
 
@@ -104,6 +106,6 @@ Once raised, an AI alert behaves like any other alert of its level: a critical o
 - **Check your provider's terms.** Depending on the plan, a provider may use submitted images to train its models. For Gemini, check whether you are on a paid plan and what it says about this.
 - **CheckBaby does not store images.** It keeps the latest answer in memory (fields and the one-sentence reason) and shows it in the sensors "AI assessment" and "Position". The sentence appears in notifications. The planned debug archive for images is not implemented.
 - **Home Assistant may keep the sentence in its history**, because it is an attribute of the sensor "AI assessment".
-- **Privacy mode stops the automatic assessments**, not the manual one.
+- **Privacy mode stops every assessment**, the automatic ones and the manual one. While it is on, no image is sent to an AI task.
 
 See also [Safety and privacy](safety-and-privacy.md).

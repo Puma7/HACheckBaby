@@ -212,6 +212,19 @@ def test_local_channel_is_wanted_only_while_an_alert_that_reached_it_is_unanswer
     assert manager.local_wanted() is False
 
 
+def test_local_channel_stays_on_when_the_alert_gets_worse() -> None:
+    manager = AlertManager()
+    manager.raise_alert(AlertKind.CRYING, AlertLevel.WARNING, {}, T0)
+    manager.tick(T0 + 60)
+    assert manager.local_wanted() is True
+
+    manager.raise_alert(AlertKind.CRYING, AlertLevel.CRITICAL, {}, T0 + 180)
+    manager.tick(T0 + 181)
+
+    assert manager.local_wanted() is True
+    assert _stages(manager).count(Stage.LOCAL) == 1  # fired once, not again
+
+
 def test_internet_down_fires_local_channel_at_once() -> None:
     manager = AlertManager()
     manager.local_immediately = True

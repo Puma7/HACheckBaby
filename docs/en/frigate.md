@@ -50,7 +50,7 @@ While a sleep place uses a Frigate camera, these sources are watched. Each one t
 | `mqtt` | The MQTT integration is not loaded or not connected to the broker. |
 | `frigate` | `<prefix>/available` does not say `online`, or nothing was received on it within two minutes after the start. |
 | `audio_level` | No sound level arrived on `<camera>/audio/dBFS` for more than 60 seconds. |
-| `microphone` | Levels arrive, but the value has not changed at all for ten minutes. That points to a dead microphone or a muted stream. |
+| `microphone` | Levels arrive from Frigate, but the value has not changed at all for ten minutes. That points to a dead microphone or a muted stream. |
 
 `mqtt`, `frigate` and `audio_level` are core sources. While one of them is a problem, CheckBaby does not know how the child is, and the state shows "Unknown" instead of "Asleep".
 
@@ -66,8 +66,8 @@ A sleep place can use ordinary Home Assistant entities instead. Leave **Frigate 
 
 CheckBaby reads these entities every two seconds and at once when the crying or motion sensor changes. The watchdog reports `cry_sensor` when the crying sensor is unavailable and `audio_level` when the level sensor has no numeric value; in both cases the state becomes "Unknown".
 
-The sound level sensor has to move. If its value stays exactly the same for ten minutes, CheckBaby assumes a dead microphone and reports `microphone`. A sensor that rounds coarsely or updates rarely will trigger this in a quiet room; in that case leave the field empty.
+A sound level that comes from a sensor entity may stay constant. The check for a dead microphone (`microphone`) applies only to the level from Frigate.
 
 Without Frigate there is no screaming signal, no pet warning and no "person counts as caregiver".
 
-**Do not combine the two.** If a sleep place has both a Frigate camera name and a crying or motion sensor, both write the same signal and the entity overwrites Frigate's value every two seconds. The sound level sensor is ignored as soon as a Frigate camera name is set.
+**Frigate takes precedence.** As soon as a sleep place has a Frigate camera name, its crying sensor, motion sensor and sound level sensor are ignored; crying, movement and level then come from Frigate only.
