@@ -1,6 +1,6 @@
 # HACheckBaby – Masterplan
 
-Stand: 21.11.2026 · Status: Planungsphase, noch kein Code
+Stand: 21.11.2026 (zweite Fassung, Entscheidungen des Projektinhabers eingearbeitet) · Status: Planungsphase, noch kein Code
 
 Ein lokales, smartes Babyphone für Home Assistant, das auf Frigate aufsetzt und über HACS installiert wird. Es soll alles können, was ein klassisches Babyphone kann, und darüber hinaus die Lage im Bett bewerten: nicht nur „es bewegt sich etwas" oder „es ist laut", sondern „geht es dem Kind gut?".
 
@@ -8,16 +8,17 @@ Ein lokales, smartes Babyphone für Home Assistant, das auf Frigate aufsetzt und
 
 ## 1. Kurzfassung
 
-- **Was wir bauen:** eine HACS-Integration (Arbeitsname-Domain `checkbaby`), die Signale aus Frigate (Weinen, Lautstärke, Bewegung, Zonen), optionalen Sensoren (mmWave-Radar, Raumklima, Türkontakt) und einem KI-Bewertungsmodell zu einem Kind-Zustand verdichtet und daraus dreistufige Benachrichtigungen ableitet (Info → Warnung → kritischer Push).
+- **Was wir bauen:** eine HACS-Integration (Domain `checkbaby`, Anzeigename „CheckBaby – Smart Baby Monitor"), die Signale aus Frigate (Weinen, Lautstärke, Bewegung, Zonen), optionalen Sensoren (mmWave-Radar, Raumklima, Türkontakt) und einem KI-Bewertungsmodell zu einem Kind-Zustand verdichtet und daraus dreistufige Benachrichtigungen ableitet (Info → Warnung → kritischer Push).
 - **Drei Schichten, klar getrennt:**
   1. **Deterministische Erkennung** (Frigate + Schwellwerte + Timer). Sie trägt alle Alarme und funktioniert ohne KI und ohne Internet.
   2. **Vital-Engine** (eigener Prozess): Atem-Mikrobewegung aus dem Videobild, optional Radar. Startet im Schattenmodus, alarmiert erst nach Validierung.
-  3. **KI-Lagebewertung** (multimodales Modell, lokal oder Cloud): Lage, Gesicht frei, Gefahren im Bett, wach/schlafend, Klartext-Begründung.
+  3. **KI-Lagebewertung** (multimodales Modell, Cloud als Opt-in oder lokal): Lage, Gesicht frei, Gefahren im Bett, wach/schlafend, Klartext-Begründung.
 - **Wichtigste Designregel:** Die KI darf Alarme anreichern und (mit Bestätigung) hochstufen, aber niemals einen deterministischen Warn- oder Kritisch-Alarm unterdrücken.
 - **Wichtigste Zuverlässigkeitsregel:** Ein Babyphone, das still ausfällt, ist schlimmer als keins. Der Watchdog („Überwachung ausgefallen") gehört deshalb in das MVP, nicht in eine spätere Version.
 - **Zwei Punkte aus der Anforderung, die der Plan anders löst als ursprünglich gedacht** (Begründung in Abschnitt 2 und 6):
   - Atemstillstand lässt sich nicht mit einem Entscheidungsmodell wie Gemini erkennen. Dafür braucht es Signalverarbeitung bzw. Radar. Das Modell bekommt die Aufgaben, die es wirklich gut kann.
-  - „Ohne Internet" und „Gemini" schließen sich aus. Der Plan macht den KI-Anbieter austauschbar: lokal (Ollama) als Standard, Gemini als bewusstes Opt-in.
+  - „Ohne Internet" und „Gemini" schließen sich aus. **Entschieden:** Alles wird lokal verarbeitet, nur die KI-Bewertung darf als Opt-in in die Cloud (Gemini, OpenRouter). Wer strikt lokal bleiben will, nutzt ein lokales Modell oder lässt die KI weg; die Alarme funktionieren trotzdem.
+- **Zeitrahmen:** Geburt im Februar 2027. Alles Alarmrelevante muss vorher fertig und getestet sein (Zeitplan in Abschnitt 7).
 
 ---
 
@@ -35,7 +36,7 @@ Daraus folgt für uns:
 - **Wortwahl im öffentlichen Repo:** „Atembewegungs-Hinweis", nicht „Atemüberwachung" oder „SIDS-Schutz". Software, die mit dem Zweck beworben wird, physiologische Vorgänge zu überwachen oder Krankheiten zu verhindern, kann unter die EU-Medizinprodukteverordnung fallen. Für ein Hobbyprojekt ist das mit sauberer Zweckbestimmung und Disclaimer vermeidbar, sollte vor v1.0 aber einmal rechtlich geprüft werden.
 - Empfehlung an alle Nutzer (und an uns selbst): ein einfaches Audio-Babyphone als Rückfallebene behalten. Das war auch der deutlichste Konsens im Reddit-Thread.
 
-**Warum ein Entscheidungsmodell keinen Atemstillstand erkennt.** Atmung ist eine periodische Bewegung von Bruchteilen eines Pixels bei 0,3–1 Hz. Ein Sprach-/Bildmodell sieht einzelne Standbilder, braucht Sekunden für eine Antwort, antwortet nicht deterministisch und kann überzeugend falsch liegen. Für Atmung braucht es eine kontinuierliche Zeitreihe mit 5–10 Bildern pro Sekunde oder einen Radarsensor. Die Rollen sind deshalb getrennt:
+**Warum ein Entscheidungsmodell keinen Atemstillstand erkennt.** Atmung ist eine periodische Bewegung von Bruchteilen eines Pixels bei 0,3–1 Hz. Ein Sprach-/Bildmodell sieht einzelne Standbilder, braucht Sekunden für eine Antwort, antwortet nicht deterministisch und kann überzeugend falsch liegen. Für Atmung braucht es eine kontinuierliche Zeitreihe mit 5–10 Bildern pro Sekunde oder einen Radarsensor. Die Rollen sind deshalb getrennt. Weil die Modelle besser werden, legen wir von Anfang an einen Vergleichssatz eigener Szenen an (Abschnitt 8). Damit lässt sich jedes neue Modell messen, auch an der Frage „atmet das Kind?", und die Rollenverteilung anhand von Zahlen neu entscheiden statt nach Gefühl.
 
 | Aufgabe | Richtiges Werkzeug |
 |---|---|
@@ -100,6 +101,16 @@ Daraus folgt für uns:
 - Kamera mit RTSP **und** Audio (AAC), brauchbares Infrarot-Nachtbild, Montage möglichst senkrecht über dem Bett, Kabel außer Reichweite (mindestens 1 m).
 - Companion-App auf den Eltern-Handys.
 - Optional: Rechner mit GPU für ein lokales Bildmodell, mmWave-Radar, Raumklimasensor.
+
+**Rahmenbedingungen dieses Projekts**
+
+- Frigate-Rechner mit drei Außenkameras ist vorhanden; für das Kind kommt eine Innenkamera dazu (Reolink oder UniFi/Ubiquiti). Netzteil statt Akku, RTSP und Ton am konkreten Modell vor dem Kauf prüfen.
+- Das Kind kommt im Februar 2027 zur Welt, das System startet also mit einem **Neugeborenen**. Das hat Folgen:
+  - In den ersten Monaten schläft das Kind empfohlenermaßen im Elternschlafzimmer (Beistellbett). Die Kamera hängt dann im Schlafzimmer der Eltern: Privatmodus per Taste und Zeitplan, kurze oder keine Aufzeichnung für diese Kamera. Hauptnutzen in dieser Zeit: abends und bei Tagschläfchen, wenn die Eltern in einem anderen Raum sind.
+  - Mehrere Schlafplätze (Beistellbett, Stubenwagen im Wohnzimmer, später Kinderzimmer). Das Datenmodell ist deshalb „ein Kind, mehrere Schlafplätze", jeder mit eigener Kamera und eigenen Sensoren; der aktive Platz wird gewählt oder automatisch erkannt.
+  - Neugeborene atmen unregelmäßig; Pausen bis etwa 10 Sekunden sind normal. Der Atem-Hinweis darf deshalb nicht unter 20 Sekunden auslösen und braucht den Schattenmodus besonders dringend.
+  - Pucksack und Schlafsack verdecken Bewegung. Das schwächt die Videoerkennung und spricht für den Radarsensor als zweite Quelle.
+  - Bis zur Geburt gibt es kein Kind zum Testen. Geprüft wird mit Puppe, Lautsprecher (Weinaufnahmen) und einem einfachen Atemsimulator; die Feinabstimmung folgt mit echten Daten im Schattenmodus.
 
 ---
 
@@ -186,7 +197,8 @@ Zustände: `leer` · `schläft` · `unruhig` · `wach` · `weint` · `betreut` (
 ### 5.5 KI-Lagebewertung
 
 - **Anbindung über `ai_task`** von Home Assistant. Der Nutzer wählt eine beliebige AI-Task-Entität (Ollama, Google Gemini, OpenAI …); wir liefern Anweisung, Bilder und ein festes Antwortschema. Damit pflegen wir keine Anbieter-SDKs und keine API-Schlüssel. Die Python-Schnittstelle und das Anhängen eigener Schnappschüsse sind in Phase 0 zu verifizieren (es gibt Forenberichte über Probleme mit Anhängen bei einzelnen Anbietern). Rückfallebene: direkter Anbieter-Client.
-- **Annahme:** Mit „Google Gemini" ist ein multimodales Gemini-Flash-Modell gemeint. Lokal kommen Bildmodelle über Ollama in Frage; die Auswahl wird in Phase 0 mit Infrarotbildern getestet, weil Nachtbilder für Bildmodelle deutlich schwieriger sind.
+- **Anbieter:** Cloud über die Home-Assistant-Integrationen für Google Gemini und OpenRouter (beliebige Bildmodelle), lokal über Ollama. Welche Anhänge (Einzelbilder, Bildserie, kurzer Clip mit Ton) jeder Anbieter über `ai_task` wirklich annimmt, ist nicht dokumentiert und wird in Phase 0 ausprobiert. Die Modellauswahl wird mit Infrarotbildern getestet, weil Nachtbilder für Bildmodelle deutlich schwieriger sind.
+- **Ausfallkette:** Cloud-Modell → lokales Modell (falls eingerichtet) → nur deterministische Stufe. Internetausfall darf nie zu „alles ok" führen.
 - **Auslöser:** ereignisgesteuert (Weinen, Aufwachen, lange Reglosigkeit, Lagewechsel), periodischer Routine-Check im Schlafmodus (Standard alle 10 min), manuell per Button/Aktion.
 - **Eingabe:** 3–4 Bilder über wenige Sekunden als Serie, dazu Kontext (Zustand, Schlafdauer, Pegel, Raumtemperatur, Altersprofil). Audio-Clips nur bei Modellen, die Audio verstehen.
 - **Ausgabe (festes Schema):** `presence`, `position` (Rücken/Bauch/Seite/sitzt/steht/unklar), `face_visible`, `airway_risk` (keins/möglich/wahrscheinlich), `state`, `hazards[]`, `assessment` (ok/Hinweis/Warnung/kritisch), `confidence`, `reason` (ein Satz in Nutzersprache).
@@ -195,7 +207,8 @@ Zustände: `leer` · `schläft` · `unruhig` · `wach` · `weint` · `betreut` (
   - KI kann Info-Ereignisse still halten („dreht sich im Schlaf"), aber keine Warn-/Kritisch-Alarme aus deterministischen Quellen unterdrücken.
   - Zeitüberschreitung oder Fehler: Es gilt die deterministische Stufe, `binary_sensor.ki_verfuegbar` geht auf aus.
   - Budget: maximale Aufrufe pro Stunde, Sperrzeit zwischen Routine-Checks.
-- **Datenschutz:** Standard ist lokal. Cloud-Anbieter nur nach ausdrücklicher Bestätigung im Config Flow, mit Hinweis, dass Bilder des Kindes das Haus verlassen und je nach Tarif zum Training genutzt werden können. Bilder werden nicht dauerhaft gespeichert, außer der Nutzer schaltet das Fehlersuch-Archiv ein.
+- **Datenschutz:** Der Nutzer wählt den Anbieter bei der Einrichtung. Cloud-Anbieter verlangen eine ausdrückliche Bestätigung mit dem Hinweis, dass Bilder des Kindes das Haus verlassen und je nach Tarif zum Training genutzt werden können (bei Gemini den bezahlten Tarif prüfen). Bilder werden nicht dauerhaft gespeichert, außer der Nutzer schaltet das Fehlersuch-Archiv ein.
+- **Kosten:** Routine-Checks alle 10 Minuten ergeben rund 70 Aufrufe pro Nacht. Der tatsächliche Preis je Nacht wird in Phase 0 gemessen und als Sensor angezeigt; das Budget begrenzt ihn nach oben.
 
 ### 5.6 Vital-Engine (Atembewegungs-Hinweis)
 
@@ -206,14 +219,41 @@ Zustände: `leer` · `schläft` · `unruhig` · `wach` · `weint` · `betreut` (
 - **Schattenmodus:** Mindestens zwei Wochen nur protokollieren, Trefferquote und Fehlalarme auswerten, erst dann Alarme freigeben. Der Schalter für den Atemalarm ist standardmäßig aus und trägt einen deutlichen Hinweistext.
 - **Bekannte Grenzen:** Pucksack/dicke Decken, Seitenlage mit Rücken zur Kamera, Ventilator oder Mobile im Bildausschnitt, flacher Kamerawinkel, Bildrauschen bei Infrarot. Diese Liste gehört in die Nutzerdoku.
 
-### 5.7 Watchdog
+### 5.7 mmWave-Radar als zweite Vitalquelle
+
+**Frage: fertigen Aqara-Sensor nehmen oder selbst bauen? Empfehlung: selbst bauen, mit Bauanleitung.**
+
+| Sensor | Liefert Atmung/Puls? | Weg nach Home Assistant | Bewertung für uns |
+|---|---|---|---|
+| Aqara FP2 | Ja, im Schlafmodus (Atemrate, Herzrate, Schlafphase) | Lokal (HomeKit) kommt nur Präsenz an. Vitaldaten liegen in der Aqara-Cloud; ein Community-Add-on (SleepRadar) liest sie von dort aus | Nicht als Basis: Cloud-Abhängigkeit, Auswertung für Erwachsene, nicht einsehbar, Verzögerung unbekannt |
+| Aqara FP300 | Nein (Präsenz, Licht, Temperatur, Feuchte; Batterie) | Zigbee/Thread/Matter | Nur als Präsenz- und Klimasensor brauchbar |
+| Aqara FP400 | Nein (Präsenz, Zonen, Personenzahl) | Drittsysteme sehen nur Präsenz und Licht | Nicht geeignet |
+| Seeed MR60BHA2 (60 GHz, mit ESP32-C6) | Ja: Atemrate, Herzrate, Abstand, Anzahl Ziele | ESPHome, direkt lokal, fertig geflasht lieferbar | **Startpunkt der Bauanleitung** |
+| DFRobot C1001, HLK-LD6002 | Ja | UART, eigener ESP32 und Firmware nötig | Alternativen, falls der MR60BHA2 nicht taugt |
+| Roh-Radar (z. B. Infineon BGT60TR13C) | Rohdaten, Auswertung selbst | Eigene Signalverarbeitung in der Vital-Engine | Ausbaustufe; in Studien und Abschlussarbeiten über dem Babybett erprobt |
+
+**Was dabei ehrlich offen ist:** Alle fertigen Module sind für Erwachsene bei bis zu 1,5 m ausgelegt. Ein Neugeborenes hat einen viel kleineren Brustkorb, atmet 30–60-mal pro Minute und hat einen Puls von 100–160. Ob die Firmware des MR60BHA2 dafür plausible Werte liefert oder Bereiche abschneidet, steht in keiner Quelle und muss gemessen werden. Forschung an Frühgeborenen zeigt, dass Radar die Atmung von Säuglingen grundsätzlich erfassen kann, allerdings mit eigener Auswertung der Rohdaten und aus etwa 45 cm Abstand.
+
+**Vorgehen in zwei Stufen:**
+
+1. **Stufe 1 (vor der Geburt bestellen):** MR60BHA2 über dem Bett, Auswertung im Schattenmodus. Genutzt wird zunächst nur die robuste Aussage „Ziel vorhanden und Atembewegung erkannt: ja/nein", nicht die exakte Rate.
+2. **Stufe 2 (nur falls Stufe 1 beim Säugling nicht trägt):** Roh-Radar mit eigener Auswertung in der Vital-Engine.
+
+**Puls:** Die Herzbewegung ist beim Säugling noch einmal deutlich kleiner als die Atembewegung. Der Pulswert wird angezeigt und protokolliert, löst aber keinen Alarm aus, solange er nicht gegen ein Referenzgerät geprüft ist.
+
+**Offene Schnittstelle:** Die Integration bindet Vitalquellen als frei zuordenbare Entitäten an (Atemrate, Herzrate, Präsenz, Aktualität). Wer einen FP2 über SleepRadar, ein Wearable oder einen anderen Sensor hat, kann ihn damit einhängen, ohne dass wir jeden Hersteller einzeln unterstützen.
+
+**Bauanleitung (Teil der Doku):** Teileliste, Gehäuse und Halterung, Montagehöhe und Winkel, Kabelführung außer Reichweite des Kindes, ESPHome-Konfiguration, Prüfschritte. Der Dead-Man-Summer aus Abschnitt 5.8 kann auf derselben Platine sitzen, wenn das Gerät im Elternschlafzimmer steht.
+
+### 5.8 Watchdog
 
 - Herzschlag je Quelle: Kamerabild-Alter, Frigate `available`, MQTT-Verbindung, letzte Audiopegel-Meldung, Engine, KI-Erreichbarkeit, Push-Zustellbarkeit.
 - Sammelsensor `binary_sensor.<kind>_ueberwachung_ok` plus Diagnosesensoren je Quelle.
 - Testalarm-Button und optionaler täglicher Selbsttest (stille Zustellprüfung).
+- **Internetausfall:** Push-Nachrichten laufen normalerweise über die Server von Apple und Google. Fällt das Internet aus, bleiben der lokale Push der Companion-App im Heim-WLAN (Verhalten bei kritischen Alarmen und auf Android in Phase 0 prüfen) und vor allem die rein lokalen Kanäle: Sirene oder Lautsprecher und Licht im Elternschlafzimmer. Der Watchdog überwacht die Internetverbindung und meldet, wenn nur noch lokale Kanäle verfügbar sind.
 - **Externer Dead-Man:** Fällt Home Assistant selbst aus, kann es niemanden warnen. Lösung: kleines ESPHome-Gerät mit Summer im Elternschlafzimmer, das einen regelmäßigen Herzschlag erwartet und bei Ausbleiben selbst piept. Entspricht dem „Verbindung verloren"-Ton klassischer Babyphone.
 
-### 5.8 Entitäten und Aktionen (Auszug)
+### 5.9 Entitäten und Aktionen (Auszug)
 
 | Typ | Entitäten |
 |---|---|
@@ -244,6 +284,8 @@ Legende: **M** = MVP (Phase 1), **2–5** = geplante Phase, **?** = Idee, noch z
 - **M** Geräuschpegel-Anzeige als Ersatz für die LED-Leiste
 - **4** Schwenken/Neigen und Presets, falls die Kamera es kann
 - **4** Batteriewarnung für beteiligte Funksensoren
+- **M** Schnell-Check „Wie geht es dem Kind?": ein Knopf, eine Aktion und ein Sprachbefehl liefern in wenigen Sekunden Zustand, aktuelles Bild, Pegel, Schlafdauer und (ab Phase 2) einen Satz KI-Einschätzung, als Antwort-Push oder Sprachausgabe
+- **M** Mehrere Schlafplätze pro Kind mit Umschaltung
 
 **B. Besser als ein Babyphone: Erkennung**
 
@@ -253,6 +295,7 @@ Legende: **M** = MVP (Phase 1), **2–5** = geplante Phase, **?** = Idee, noch z
 - **3** Atembewegungs-Hinweis aus Video, optional Radar
 - **2** Kleinkind steht auf, klettert, verlässt das Bett; Türkontakt als zweites Signal
 - **2** Husten-Erkennung und Hustenhäufigkeit pro Nacht (Audio-Label vorhanden)
+- **3** mmWave-Radar nach Bauanleitung als zweite Vitalquelle (Abschnitt 5.7)
 - **?** Frigate-Zustandsklassifikation (eigenes kleines Modell „Bett leer / schläft / wach") als lokale, schnelle Alternative zur KI für Standardfälle
 - **?** Druck-/Belegungssensor unter der Matratze als weitere unabhängige Quelle
 - **?** Wearables (z. B. Owlet über vorhandene Integration) als optionale Signalquelle
@@ -268,6 +311,8 @@ Legende: **M** = MVP (Phase 1), **2–5** = geplante Phase, **?** = Idee, noch z
 - **4** Stille Kanäle: Lampe im Elternschlafzimmer (Farbe je Stufe), Vibration auf der Smartwatch
 - **4** Anwesenheitsabhängig: Tagsüber im Wohnzimmer TV-Einblendung oder Wandtablet statt Handyalarm
 - **4** Babysitter-/Gästemodus: befristetes Zielgerät, vereinfachte Ansicht, konservativere Schwellen
+- **M** Lokale Sirene im Elternschlafzimmer, wenn ein Alarm eine Minute unquittiert bleibt (nie im Kinderzimmer)
+- **M** Türkontakt pausiert Meldungen, solange jemand im Zimmer ist
 - **?** Telefonanruf als letzte Eskalationsstufe
 
 **D. Schlaf-Analyse**
@@ -285,7 +330,11 @@ Legende: **M** = MVP (Phase 1), **2–5** = geplante Phase, **?** = Idee, noch z
 - **3** Dead-Man-Summer (ESPHome)
 - **3** Schattenmodus für jede neue Erkennung
 - **6** Wiedergabe-/Simulationsmodus: aufgezeichnete Szenarien einspielen, um Schwellen zu testen
+- **M** Meldung bei Internetausfall und Umschaltung auf lokale Kanäle
+- **2** Modell-Vergleich: derselbe beschriftete Szenensatz gegen mehrere KI-Modelle, damit ein Modellwechsel messbar besser ist
 - **?** Doku-Empfehlungen: USV, Kamera per Firewall vom Internet trennen, Zweitgerät als Rückfallebene
+- **?** Zugriff für Großeltern und Babysitter von außen (Fernzugriff, eingeschränktes Benutzerkonto)
+- **?** Geschwister/Zwillinge: mehrere Kinder parallel, getrennte Zustände und Ziele
 
 **F. Bedienung**
 
@@ -298,6 +347,16 @@ Legende: **M** = MVP (Phase 1), **2–5** = geplante Phase, **?** = Idee, noch z
 ---
 
 ## 7. Umsetzung in Phasen
+
+**Zeitplan bis zur Geburt (Februar 2027).** Nach der Geburt ist kaum Entwicklungszeit; dann wird gemessen und nachjustiert, nicht neu gebaut.
+
+| Zeitraum | Ziel |
+|---|---|
+| bis Mitte Dezember 2026 | Phase 0 abgeschlossen; Kamera und Radarmodul bestellt und montiert |
+| bis Mitte Januar 2027 | Phase 1 (MVP) fertig, mit Puppe und Lautsprecher getestet, zwei Wochen Dauerlauf |
+| bis zur Geburt | Phase 2 in Grundfunktion (Safe-Sleep-Check, Schnell-Check mit KI); Radar und Vital-Engine laufen im Schattenmodus mit |
+| ab Geburt | Schattenbetrieb mit echten Daten, Schwellen anpassen, Entscheidung über Atem-Hinweis frühestens nach 14 Nächten |
+| danach | Phasen 4 bis 6 nach Bedarf |
 
 **Phase 0 – Fundament und Machbarkeit**
 
@@ -362,13 +421,20 @@ Szenario-Labor (Compose mit HA, Mosquitto, Frigate und go2rtc, das Testvideos al
 | Frigate-/HA-Schnittstellen ändern sich | Quellen hinter einer Schnittstelle, CI gegen älteste und neueste HA-Version |
 | Einstufung als Medizinprodukt | Wortwahl, keine Heilsversprechen, Prüfung vor v1.0 |
 
-**Offene Entscheidungen (mit Empfehlung):**
+**Entschieden (21.11.2026):**
 
-1. **Name/Domain:** `checkbaby` als Domain, Anzeigename „HACheckBaby". *Empfehlung: so übernehmen.*
-2. **KI-Standard:** strikt lokal oder Cloud erlaubt? *Empfehlung: beides unterstützen, lokal als Standard, Gemini als Opt-in.*
-3. **Vital-Engine:** eigener Container/Add-on oder im HA-Prozess? *Empfehlung: eigener Container, nach Spike endgültig.*
-4. **Frigate-Anbindung:** direkt per MQTT oder über die Entitäten der Frigate-Integration? *Empfehlung: MQTT als Hauptweg, Entitäten als Rückfall.*
-5. **Vorhandene Hardware:** Welche Kamera, welcher Frigate-Rechner (GPU?), Alter des Kindes? Bestimmt Altersprofil, Modellwahl und die Reihenfolge der Phasen 2 und 3.
+1. Name: Domain `checkbaby`, Anzeigename „CheckBaby – Smart Baby Monitor".
+2. KI: Cloud (Gemini, OpenRouter) als Opt-in ist ausdrücklich gewünscht; lokal bleibt möglich. Alles außer der KI-Bewertung läuft lokal.
+3. Frigate ist die zentrale Basis für Weinen, Schreien, Pegel und Bewegung. Die Atemstillstand-Erkennung schreiben wir selbst.
+4. mmWave-Radar kommt als zusätzliche Quelle dazu, als Eigenbau mit Bauanleitung (Abschnitt 5.7).
+5. Erstes Altersprofil: Neugeborenes.
+
+**Noch offen:**
+
+1. Vital-Engine als eigener Container/Add-on oder im HA-Prozess? *Empfehlung: eigener Container, endgültig nach dem Spike.*
+2. Frigate direkt per MQTT oder über die Entitäten der Frigate-Integration? *Empfehlung: MQTT als Hauptweg, Entitäten als Rückfall.*
+3. Kameramodell: Reolink oder UniFi. Kriterien: RTSP mit Ton, gutes Infrarotbild aus kurzer Distanz, Montage senkrecht über dem Bett, Gegensprechen über go2rtc (bei UniFi nur über Protect).
+4. Hat der Frigate-Rechner eine GPU für ein lokales Bildmodell als Rückfallebene?
 
 ---
 
@@ -383,6 +449,10 @@ Szenario-Labor (Compose mit HA, Mosquitto, Frigate und go2rtc, das Testvideos al
 - [Forum: Baby monitor – any options to consider?](https://community.home-assistant.io/t/parents-baby-monitor-any-options-to-consider/664927)
 - [CuboAI-Integration](https://github.com/niruse/cuboai) · [Baby Buddy für Home Assistant](https://github.com/jcgoette/baby_buddy_homeassistant)
 - [CribSense](https://lukehsiao.github.io/CribSense) · [respmon](https://github.com/kevroy314/respmon) · [Vergleich von Verfahren zur Atemerkennung per Video](https://ar5iv.labs.arxiv.org/html/2211.16046)
-- [ESPHome: Seeed MR60BHA2](https://esphome.io/components/seeed_mr60bha2/)
+- [ESPHome: Seeed MR60BHA2](https://esphome.io/components/seeed_mr60bha2/) · [DFRobot: Auswahlhilfe mmWave-Sensoren](https://www.dfrobot.com/blog-22042.html)
+- [SleepRadar: Aqara-FP2-Vitaldaten über die Aqara-Cloud](https://community.home-assistant.io/t/sleepradar-aqara-fp2-sleep-vitals-heart-rate-breathing-rate-sleep-stage-as-home-assistant-mqtt-sensors/1016036) · [Aqara FP300](https://www.aqara.cn/eu/product/presence-multi-sensor-fp300) · [Aqara FP400 im Test](https://gizmodo.com/aqara-multi-sensor-fp400-review-not-quite-the-mmwave-of-the-future-2000804454)
+- [Radar-Atemüberwachung bei Frühgeborenen (Scientific Reports 2022)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8956695/) · [Studienprotokoll FMCW-Radar für Säuglinge (2025)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11897680/)
+- [Companion-App: lokaler Push](https://companion.home-assistant.io/docs/notifications/notification-local) · [Home Assistant: OpenRouter](https://www.home-assistant.io/integrations/open_router) · [Google Gemini](https://www.home-assistant.io/integrations/google_gemini)
+- [localsmarthomeguide: Local baby monitor setup with Frigate and RTSP](https://localsmarthomeguide.com/articles/local-baby-monitor-setup-with-frigate-and-rtsp/) (vom Projektinhaber als Text bereitgestellt)
 
-Hinweis zur Recherche: Die drei verlinkten Artikel (localsmarthomeguide, HA-Blog 2017, techdout) waren aus der Arbeitsumgebung nicht direkt abrufbar. Der HA-Blogartikel ist über Suchergebnisse inhaltlich abgedeckt, der techdout-Artikel über den mitgelieferten Reddit-Thread; der localsmarthomeguide-Artikel wurde nicht gelesen. Angaben zu Frigate und `ai_task` stammen aus Dokumentation und Suchergebnissen und werden in Phase 0 am laufenden System überprüft.
+Hinweis zur Recherche: Der HA-Blogartikel von 2017 und der techdout-Artikel waren aus der Arbeitsumgebung nicht direkt abrufbar; ihr Inhalt ist über Suchergebnisse bzw. den mitgelieferten Reddit-Thread abgedeckt. Angaben zu Frigate, `ai_task`, lokalem Push und den Radarmodulen stammen aus Dokumentation und Suchergebnissen und werden in Phase 0 am laufenden System überprüft. Für Radarmodule an Säuglingen gibt es keine Herstellerangaben; hier zählt nur die eigene Messung.
