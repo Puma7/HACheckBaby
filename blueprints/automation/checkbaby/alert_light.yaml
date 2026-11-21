@@ -1,0 +1,136 @@
+# CheckBaby blueprint: a light shows alerts by colour
+#
+# UNTESTED ON A REAL INSTALLATION: this file was loaded once into the automated
+# test environment of Home Assistant 2026.2 and 2026.10, where a test alert
+# switched a simulated light to the right colour and "Seen" switched it off.
+# It has never been imported into a real Home Assistant and never been tried
+# with a real lamp. Test it with the action checkbaby.test_alert (level
+# "warning" and level "critical").
+#
+# Install: copy this file to config/blueprints/automation/checkbaby/ or use
+# Settings -> Automations & scenes -> Blueprints -> Import blueprint.
+
+blueprint:
+  name: "CheckBaby: alert light"
+  description: >-
+    Turns a light to one colour for a warning and to another for a critical
+    alert, and turns it off when no alert is unanswered any more. Meant as a
+    silent channel, for example a lamp in the parents' bedroom.
+
+
+    It listens to the event entity "Alert" of a CheckBaby child. That entity
+    fires when an alert first sends a notification and when it rises to a
+    higher level; the attribute "level" is "warning" or "critical". Hints and
+    alerts that are only recorded do not fire it.
+
+
+    The light is turned off when the binary sensor "Unanswered alert" turns
+    off, that is after "Seen" or when the cause has ended. It is turned off
+    even if it was on before the alert. "Quiet for 5 min" does not turn it
+    off, because the alert is still unanswered.
+
+
+    The light must support colours. This blueprint has not run on a real
+    installation and it is not a replacement for the notifications or the local alarm of CheckBaby.
+    CheckBaby is not a medical device.
+  domain: automation
+  author: CheckBaby
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    alert_event:
+      name: Alert event
+      description: The event entity "Alert" of the child.
+      selector:
+        entity:
+          filter:
+            - integration: checkbaby
+              domain: event
+    unanswered_alert:
+      name: Unanswered alert sensor
+      description: >-
+        The binary sensor "Unanswered alert" of the same child (on an English
+        Home Assistant its ID ends in "_unanswered_alert", on a German one in
+        "_unbeantworteter_alarm"). The list shows all binary sensors of
+        CheckBaby; pick this one.
+      selector:
+        entity:
+          filter:
+            - integration: checkbaby
+              domain: binary_sensor
+    light:
+      name: Light
+      description: One or more lights that support colours.
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - domain: light
+    warning_color:
+      name: Colour for a warning
+      default: [255, 170, 0]
+      selector:
+        color_rgb: {}
+    critical_color:
+      name: Colour for a critical alert
+      default: [255, 0, 0]
+      selector:
+        color_rgb: {}
+    brightness:
+      name: Brightness
+      default: 40
+      selector:
+        number:
+          min: 1
+          max: 100
+          unit_of_measurement: "%"
+
+mode: restart
+
+variables:
+  warning_color: !input warning_color
+  critical_color: !input critical_color
+  brightness: !input brightness
+
+triggers:
+  # The state of an event entity is the time of its last event. After a restart
+  # Home Assistant restores the old time (unavailable -> old time); that is not
+  # a new alert, so changes from "unavailable" are ignored.
+  - trigger: state
+    entity_id: !input alert_event
+    not_from: unavailable
+    not_to:
+      - unavailable
+      - unknown
+    id: alert
+  - trigger: state
+    entity_id: !input unanswered_alert
+    from: "on"
+    to: "off"
+    id: answered
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: alert
+          - condition: template
+            value_template: >-
+              {{ trigger.to_state is not none
+                 and trigger.to_state.attributes.get('level') in ['warning', 'critical'] }}
+        sequence:
+          - action: light.turn_on
+            target:
+              entity_id: !input light
+            data:
+              rgb_color: >-
+                {{ critical_color if trigger.to_state.attributes.get('level') == 'critical'
+                   else warning_color }}
+              brightness_pct: "{{ brightness }}"
+      - conditions:
+          - condition: trigger
+            id: answered
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: !input light

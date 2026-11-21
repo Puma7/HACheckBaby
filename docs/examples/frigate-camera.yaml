@@ -1,0 +1,107 @@
+# Frigate configuration snippet for the camera at the bed
+#
+# UNTESTED: written from the Frigate documentation, never run against a real
+# Frigate. Verify every key against the documentation of YOUR Frigate version
+# (https://docs.frigate.video); Frigate changes its configuration format
+# between releases. This file has been checked for valid YAML only.
+#
+# This is not a complete Frigate configuration. Merge the parts into your
+# existing config.yml. Replace addresses, user names and passwords; do not
+# publish your real ones.
+#
+# What CheckBaby needs from Frigate (see docs/en/frigate.md):
+#   1. MQTT enabled, on the broker Home Assistant uses.
+#   2. An input with the role "audio" whose stream really contains sound.
+#   3. Audio detection enabled for the camera, with "crying" AND "scream" in
+#      "listen". "crying" is NOT in Frigate's default list, so without this
+#      Frigate never reports crying.
+#   4. Motion detection running (per the Frigate documentation it runs
+#      while "detect" is enabled).
+#   5. Optional: a zone over the bed and cat/dog tracking for the pet warning.
+#
+# With this file the CheckBaby sleep place gets:
+#   Frigate camera name:      nursery
+#   Frigate zone of the bed:  nursery_bed
+# and CheckBaby subscribes to frigate/available, frigate/nursery/audio/crying,
+# frigate/nursery/audio/scream, frigate/nursery/audio/dBFS,
+# frigate/nursery/motion, frigate/nursery_bed/cat and frigate/nursery_bed/dog.
+
+mqtt:
+  enabled: true
+  host: 192.168.1.10          # your MQTT broker
+  user: frigate
+  password: CHANGE_ME
+  # CheckBaby expects "frigate". If you change it, enter the same value in the
+  # CheckBaby options under "Frigate MQTT topic prefix".
+  topic_prefix: frigate
+
+# One connection to the camera, several consumers (Frigate, the live view, the
+# optional vital engine). The RTSP paths are camera specific; these two are
+# placeholders.
+go2rtc:
+  streams:
+    nursery:
+      - rtsp://USER:PASSWORD@192.168.1.50:554/main_stream
+    nursery_sub:
+      - rtsp://USER:PASSWORD@192.168.1.50:554/sub_stream
+
+cameras:
+  nursery:
+    ffmpeg:
+      inputs:
+        # Low-resolution stream for detection. It must carry the audio track,
+        # because this input has the role "audio".
+        - path: rtsp://127.0.0.1:8554/nursery_sub
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - audio
+        # High-resolution stream for recordings. It is only used if you enable
+        # "record" below; if you never record this camera, remove this input.
+        - path: rtsp://127.0.0.1:8554/nursery
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+
+    detect:
+      enabled: true
+
+    audio:
+      enabled: true
+      # Lowest volume at which Frigate runs its audio detection at all. If
+      # crying from the far side of the room is missed, lower it.
+      min_volume: 500
+      # Seconds without the sound before Frigate switches the label back to
+      # OFF. CheckBaby counts uninterrupted crying, so a value that is too
+      # short makes the count restart during pauses for breath.
+      max_not_heard: 30
+      listen:
+        - crying
+        - scream
+        # - yell   # optional for your own use; CheckBaby does not read it
+      filters:
+        crying:
+          threshold: 0.8      # Frigate's default; lower = more sensitive
+
+    # Only needed for the pet warning and for "a person seen by the camera
+    # counts as a caregiver".
+    objects:
+      track:
+        - person
+        - cat
+        - dog
+
+    zones:
+      # The name must be unique in Frigate and must differ from the camera
+      # name. Draw the real outline in the Frigate user interface; these
+      # coordinates are a placeholder rectangle.
+      nursery_bed:
+        coordinates: 0.25,0.25,0.75,0.25,0.75,0.9,0.25,0.9
+        objects:
+          - cat
+          - dog
+
+    # Recording is off here. For a camera in your own bedroom, consider
+    # leaving it off or keeping recordings only for a short time.
+    record:
+      enabled: false

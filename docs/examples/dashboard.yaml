@@ -1,0 +1,176 @@
+# CheckBaby example dashboard (English entity IDs)
+#
+# UNTESTED: this file has never been loaded into a Home Assistant dashboard.
+# Two things were checked: it is valid YAML, and every CheckBaby entity ID in it
+# is one that Home Assistant 2026.2 and 2026.10 really create for a child named
+# "baby" in the automated test environment. Whether the cards look right has
+# not been seen by anyone. Expect to adjust it.
+#
+# The entity IDs assume
+#   - a child named "baby" (the name you typed in the setup dialog), and
+#   - a Home Assistant whose language was English when CheckBaby was set up.
+# A child named "Emma" has sensor.emma_state instead of sensor.baby_state.
+# On a Home Assistant set to German the IDs are built from the German entity
+# names; use dashboard.de.yaml there. Check the real IDs on the device page.
+#
+# camera.nursery is a placeholder for YOUR camera entity. It is not created by
+# CheckBaby.
+#
+# How to use it: create a new dashboard, open "Edit dashboard" -> three dots ->
+# "Raw configuration editor" and paste this file. To add the view to an
+# existing dashboard, copy only the list item under "views:".
+#
+# It uses standard cards only. If you want a notification's "Live" button to
+# open this view, enter its path (for example /dashboard-baby/baby) in the
+# CheckBaby options under "Dashboard opened from a notification".
+#
+# CheckBaby is not a medical device.
+
+title: CheckBaby
+views:
+  - title: Baby
+    path: baby
+    icon: mdi:baby-face-outline
+    cards:
+      # Live picture. Tap it for the larger view with sound, if your camera
+      # integration provides it.
+      - type: picture-entity
+        entity: camera.nursery
+        camera_view: live
+        show_name: false
+        show_state: false
+
+      # Only visible while a warning or critical alert is unanswered.
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.baby_unanswered_alert
+            state: "on"
+        card:
+          type: entities
+          title: Unanswered alert
+          entities:
+            - entity: sensor.baby_alert_level
+            - entity: sensor.baby_alert_reason
+            - entity: button.baby_seen
+            - entity: button.baby_quiet_for_5_minutes
+
+      # Only visible while the watchdog has found a problem. The names of the
+      # problems are in the attribute "problems".
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.baby_monitoring_problem
+            state: "on"
+        card:
+          type: entities
+          title: Monitoring problem
+          entities:
+            - entity: binary_sensor.baby_monitoring_problem
+            - type: attribute
+              entity: sensor.baby_monitoring_problems
+              attribute: problems
+              name: Problems
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: tile
+            entity: sensor.baby_state
+          - type: tile
+            entity: sensor.baby_alert_level
+          - type: tile
+            entity: binary_sensor.baby_crying
+          - type: tile
+            entity: binary_sensor.baby_movement
+          - type: tile
+            entity: binary_sensor.baby_someone_is_with_the_child
+          - type: tile
+            entity: sensor.baby_asleep_since
+
+      # Sound level in dBFS: 0 is the loudest possible value, quiet rooms are
+      # far below. The colour limits are guesses; set them from what you see.
+      - type: gauge
+        entity: sensor.baby_sound_level
+        name: Sound level
+        min: -80
+        max: 0
+        needle: true
+        severity:
+          green: -80
+          yellow: -40
+          red: -20
+
+      - type: entities
+        title: Monitoring
+        entities:
+          - entity: switch.baby_monitoring
+          - entity: switch.baby_privacy_mode
+          - entity: select.baby_mode
+          - entity: select.baby_on_duty
+          - entity: select.baby_active_sleep_place
+          - entity: binary_sensor.baby_quiet_time
+
+      - type: entities
+        title: Actions
+        entities:
+          - entity: button.baby_seen
+          - entity: button.baby_quiet_for_5_minutes
+          - entity: button.baby_quick_check
+          - entity: button.baby_send_night_report
+          - entity: button.baby_test_alert
+
+      - type: entities
+        title: Sleep
+        entities:
+          - entity: sensor.baby_asleep_since
+          - entity: sensor.baby_last_sleep
+          - entity: sensor.baby_sleep_today
+          - entity: sensor.baby_wake_ups_tonight
+          - entity: sensor.baby_crying_today
+          - entity: sensor.baby_last_movement
+          - entity: sensor.baby_sleeping_bag_suggestion
+
+      # Optional parts. Remove what you do not use.
+      # "Breathing movement" is a hint from an unvalidated source, not a
+      # measurement. "Unknown" means no source is usable, not "all fine".
+      - type: entities
+        title: Breathing-movement hint (optional)
+        entities:
+          - entity: binary_sensor.baby_breathing_movement
+          - entity: sensor.baby_breathing_rate_estimate
+          - entity: sensor.baby_heart_rate_estimate
+          - entity: binary_sensor.baby_in_bed
+          - entity: switch.baby_breathing_movement_alert
+          - entity: select.baby_vital_sources_must_agree
+
+      - type: entities
+        title: AI assessment (optional)
+        entities:
+          - entity: switch.baby_ai_assessment
+          - entity: sensor.baby_ai_assessment
+          - type: attribute
+            entity: sensor.baby_ai_assessment
+            attribute: reason
+            name: Reason
+          - entity: sensor.baby_position
+          - entity: button.baby_ai_check_now
+          - entity: binary_sensor.baby_ai_assessment_available
+          - entity: sensor.baby_ai_calls_in_the_last_hour
+
+      - type: entities
+        title: Thresholds
+        entities:
+          - entity: select.baby_sensitivity
+          - entity: number.baby_crying_before_a_warning
+          - entity: number.baby_unanswered_crying_before_critical
+          - entity: number.baby_loudness_above_the_noise_floor
+          - entity: sensor.baby_learned_noise_floor
+          - entity: number.baby_no_breathing_movement_before_an_alert
+          - entity: number.baby_ai_routine_check_interval
+          - entity: number.baby_lowest_room_temperature
+          - entity: number.baby_highest_room_temperature
+          - entity: switch.baby_audio_relay
+          - entity: binary_sensor.baby_audio_relay_playing
+          - entity: sensor.baby_age_profile

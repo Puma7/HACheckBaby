@@ -1,0 +1,162 @@
+# ESPHome configuration for a dead-man buzzer (ESP32 with an active buzzer)
+#
+# UNTESTED: never compiled, never flashed, never heard. It has been checked for
+# valid YAML only. Build it, then test it by stopping Home Assistant on purpose.
+#
+# What it is for: if Home Assistant itself fails, it cannot warn anyone. This
+# device expects a regular "heartbeat" and makes a noise on its own when the
+# heartbeat stops, like the "connection lost" tone of a classic baby monitor.
+# Put it where you sleep, never in the child's room.
+#
+# How it works:
+#   - The template button "Heartbeat" restarts a countdown of 120 seconds and
+#     silences the buzzer.
+#   - If the countdown runs out while the switch "Armed" is on, the buzzer
+#     sounds and keeps sounding until the next press of "Heartbeat" or until
+#     "Armed" is switched off.
+#   - The countdown runs on the device. It needs neither Home Assistant nor
+#     Wi-Fi once it is armed.
+#
+# How it pairs with CheckBaby:
+#   - In the CheckBaby options, add this device's button
+#     (button.checkbaby_buzzer_heartbeat on an English Home Assistant) under
+#     "Dead-man heartbeat buttons".
+#   - CheckBaby presses it every 30 seconds while Monitoring is on AND there
+#     is no monitoring problem. So the buzzer sounds about two minutes after
+#     Home Assistant stops, after CheckBaby stops, after the Wi-Fi between the
+#     two fails, and also after a monitoring problem (for example Frigate
+#     offline) has lasted two minutes.
+#   - CheckBaby does NOT switch "Armed". When you turn Monitoring off, the
+#     presses stop, and an armed buzzer sounds two minutes later. Couple the
+#     two with an automation of your own, for example:
+#
+#       triggers:
+#         - trigger: state
+#           entity_id: switch.baby_monitoring
+#           to: ["on", "off"]
+#       actions:
+#         - action: "switch.turn_{{ trigger.to_state.state }}"
+#           target:
+#             entity_id: switch.checkbaby_buzzer_armed
+#
+# Wiring: an ACTIVE buzzer module (one that beeps by itself when powered) with
+# its signal pin on GPIO25. A passive piezo disc stays silent with this
+# configuration. If your module is active-low, set "inverted: true" on the pin.
+#
+# The BOOT button that most ESP32 development boards have (GPIO0) silences the
+# buzzer and switches "Armed" off, so you can stop the noise while Home
+# Assistant is down. Remove that block if your board has no such button.
+#
+# Secrets: put wifi_ssid, wifi_password, api_encryption_key and ota_password
+# into the secrets.yaml of ESPHome. Never commit them.
+
+substitutions:
+  heartbeat_timeout: 120s
+
+esphome:
+  name: checkbaby-buzzer
+  friendly_name: CheckBaby buzzer
+  on_boot:
+    # After a power cut the "Armed" state is restored; start the countdown
+    # again so that a Home Assistant that did not come back is noticed.
+    priority: -100
+    then:
+      - if:
+          condition:
+            switch.is_on: armed
+          then:
+            - script.execute: countdown
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+  # Do not reboot when Home Assistant is unreachable: that is exactly the
+  # moment this device has to keep counting.
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  reboot_timeout: 0s
+
+output:
+  - platform: gpio
+    id: buzzer_pin
+    pin:
+      number: GPIO25
+      inverted: false
+
+switch:
+  # Internal: the buzzer itself. Not shown in Home Assistant.
+  - platform: output
+    id: buzzer
+    output: buzzer_pin
+    restore_mode: ALWAYS_OFF
+
+  - platform: template
+    name: Armed
+    id: armed
+    icon: mdi:shield-check
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - script.execute: countdown
+    on_turn_off:
+      - script.stop: countdown
+      - switch.turn_off: buzzer
+
+button:
+  - platform: template
+    name: Heartbeat
+    id: heartbeat
+    icon: mdi:heart-pulse
+    on_press:
+      - switch.turn_off: buzzer
+      - if:
+          condition:
+            switch.is_on: armed
+          then:
+            - script.execute: countdown
+
+binary_sensor:
+  # Shows in Home Assistant whether the buzzer is sounding.
+  - platform: template
+    name: Sounding
+    device_class: problem
+    lambda: return id(buzzer).state;
+
+  # Optional: the BOOT button silences and disarms without Home Assistant.
+  - platform: gpio
+    id: boot_button
+    internal: true
+    pin:
+      number: GPIO0
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      - switch.turn_off: armed
+
+script:
+  # "restart" means: every new start throws the running countdown away.
+  - id: countdown
+    mode: restart
+    then:
+      - delay: ${heartbeat_timeout}
+      - if:
+          condition:
+            switch.is_on: armed
+          then:
+            - switch.turn_on: buzzer

@@ -1,0 +1,101 @@
+# CheckBaby blueprint: quiet house while the child sleeps
+#
+# UNTESTED ON A REAL INSTALLATION: this file was loaded once into the automated
+# test environment of Home Assistant 2026.2 and 2026.10, where it ran its start
+# and end actions against simulated services. It has never been imported into
+# a real Home Assistant. Try it with harmless actions first.
+#
+# Install: copy this file to config/blueprints/automation/checkbaby/ or use
+# Settings -> Automations & scenes -> Blueprints -> Import blueprint.
+
+blueprint:
+  name: "CheckBaby: quiet house while the child sleeps"
+  description: >-
+    Runs one sequence of actions when the child falls asleep and another one
+    when it is no longer asleep, for example to mute the doorbell and pause
+    the robot vacuum and to undo both afterwards.
+
+
+    It follows the binary sensor "Quiet time" of a CheckBaby child. That sensor
+    is on while Monitoring is on, privacy mode is off and the child's state is
+    "Asleep" or "Restless". It turns off when the child wakes or cries, when
+    someone enters the room, when the bed is empty, when the signal is lost and
+    when you switch Monitoring off.
+
+
+    Because the sensor also turns off for a moment when you look in on the
+    child, you can set a delay before the end actions run. The start actions
+    can run again without the end actions in between, so choose actions that
+    are safe to repeat.
+
+
+    This blueprint has not run on a real installation. CheckBaby is not a
+    medical device.
+  domain: automation
+  author: CheckBaby
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    quiet_time:
+      name: Quiet time sensor
+      description: >-
+        The binary sensor "Quiet time" of the child (on an English Home
+        Assistant its ID ends in "_quiet_time", on a German one in
+        "_ruhezeit"). The list shows all binary sensors of CheckBaby; pick
+        this one.
+      selector:
+        entity:
+          filter:
+            - integration: checkbaby
+              domain: binary_sensor
+    start_actions:
+      name: When quiet time starts
+      description: For example mute the doorbell, pause the vacuum, lower the TV volume.
+      default: []
+      selector:
+        action: {}
+    end_actions:
+      name: When quiet time ends
+      description: For example unmute the doorbell and let the vacuum continue.
+      default: []
+      selector:
+        action: {}
+    end_delay:
+      name: Wait before the end actions
+      description: >-
+        The end actions only run after "Quiet time" has been off for this long
+        without a break. Zero runs them at once.
+      default:
+        hours: 0
+        minutes: 0
+        seconds: 0
+      selector:
+        duration: {}
+
+mode: restart
+
+triggers:
+  - trigger: state
+    entity_id: !input quiet_time
+    from: "off"
+    to: "on"
+    id: start
+  # Only a change from "on" counts as an end. That keeps a restart of Home
+  # Assistant (unavailable -> off) from running the end actions.
+  - trigger: state
+    entity_id: !input quiet_time
+    from: "on"
+    to: "off"
+    for: !input end_delay
+    id: end
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: start
+        sequence: !input start_actions
+      - conditions:
+          - condition: trigger
+            id: end
+        sequence: !input end_actions

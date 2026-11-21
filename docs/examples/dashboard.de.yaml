@@ -1,0 +1,184 @@
+# CheckBaby-Beispiel-Dashboard (deutsche Entitäts-IDs)
+#
+# UNGETESTET: Diese Datei wurde nie in ein Home-Assistant-Dashboard geladen.
+# Geprüft wurde zweierlei: Sie ist gültiges YAML, und jede CheckBaby-Entitäts-ID
+# darin ist eine, die Home Assistant 2026.2 und 2026.10 in der automatischen
+# Testumgebung für ein Kind namens „baby" bei deutscher Spracheinstellung
+# wirklich anlegt. Wie die Karten aussehen, hat noch niemand gesehen. Rechne
+# damit, dass du die Datei anpassen musst.
+#
+# Die Entitäts-IDs gelten für
+#   - ein Kind mit dem Namen „baby" (der Name aus dem Einrichtungsdialog) und
+#   - ein Home Assistant, das bei der Einrichtung von CheckBaby auf Deutsch
+#     eingestellt war.
+# Home Assistant bildet die ID aus dem Gerätenamen und dem Namen der Entität in
+# der eingestellten Sprache; Umlaute verlieren dabei ihre Punkte (ä wird a).
+# Ein Kind namens „Emma" hat sensor.emma_zustand statt sensor.baby_zustand.
+# War dein Home Assistant bei der Einrichtung auf Englisch eingestellt, nimm
+# dashboard.yaml. Die echten IDs stehen auf der Geräteseite.
+#
+# camera.kinderzimmer ist ein Platzhalter für DEINE Kamera-Entität. CheckBaby
+# legt sie nicht an.
+#
+# So verwendest du die Datei: neues Dashboard anlegen, „Dashboard bearbeiten" ->
+# drei Punkte -> „Raw-Konfigurationseditor" öffnen und diese Datei einfügen. Um
+# die Ansicht in ein vorhandenes Dashboard zu übernehmen, kopiere nur den
+# Listeneintrag unter „views:".
+#
+# Es werden nur Standardkarten verwendet. Soll der Knopf „Live" einer
+# Benachrichtigung diese Ansicht öffnen, trage ihren Pfad (zum Beispiel
+# /dashboard-baby/baby) in den CheckBaby-Optionen unter „Dashboard, das eine
+# Benachrichtigung öffnet" ein.
+#
+# CheckBaby ist kein Medizinprodukt.
+
+title: CheckBaby
+views:
+  - title: Baby
+    path: baby
+    icon: mdi:baby-face-outline
+    cards:
+      # Live-Bild. Antippen öffnet die größere Ansicht, mit Ton, falls deine
+      # Kamera-Integration ihn liefert.
+      - type: picture-entity
+        entity: camera.kinderzimmer
+        camera_view: live
+        show_name: false
+        show_state: false
+
+      # Nur sichtbar, solange eine Warnung oder ein kritischer Alarm
+      # unbeantwortet ist.
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.baby_unbeantworteter_alarm
+            state: "on"
+        card:
+          type: entities
+          title: Unbeantworteter Alarm
+          entities:
+            - entity: sensor.baby_alarmstufe
+            - entity: sensor.baby_alarmgrund
+            - entity: button.baby_gesehen
+            - entity: button.baby_5_minuten_ruhe
+
+      # Nur sichtbar, solange die Ausfallüberwachung eine Störung gefunden hat.
+      # Die Namen der Störungen stehen im Attribut „problems".
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.baby_storung_der_uberwachung
+            state: "on"
+        card:
+          type: entities
+          title: Störung der Überwachung
+          entities:
+            - entity: binary_sensor.baby_storung_der_uberwachung
+            - type: attribute
+              entity: sensor.baby_storungen_der_uberwachung
+              attribute: problems
+              name: Störungen
+
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: tile
+            entity: sensor.baby_zustand
+          - type: tile
+            entity: sensor.baby_alarmstufe
+          - type: tile
+            entity: binary_sensor.baby_weinen
+          - type: tile
+            entity: binary_sensor.baby_bewegung
+          - type: tile
+            entity: binary_sensor.baby_jemand_ist_beim_kind
+          - type: tile
+            entity: sensor.baby_schlaft_seit
+
+      # Geräuschpegel in dBFS: 0 ist der lauteste mögliche Wert, ruhige Räume
+      # liegen weit darunter. Die Farbgrenzen sind geschätzt; stelle sie nach
+      # dem ein, was du bei dir siehst.
+      - type: gauge
+        entity: sensor.baby_gerauschpegel
+        name: Geräuschpegel
+        min: -80
+        max: 0
+        needle: true
+        severity:
+          green: -80
+          yellow: -40
+          red: -20
+
+      - type: entities
+        title: Überwachung
+        entities:
+          - entity: switch.baby_uberwachung
+          - entity: switch.baby_privatmodus
+          - entity: select.baby_modus
+          - entity: select.baby_hat_dienst
+          - entity: select.baby_aktiver_schlafplatz
+          - entity: binary_sensor.baby_ruhezeit
+
+      - type: entities
+        title: Aktionen
+        entities:
+          - entity: button.baby_gesehen
+          - entity: button.baby_5_minuten_ruhe
+          - entity: button.baby_schnell_check
+          - entity: button.baby_nachtbericht_senden
+          - entity: button.baby_testalarm
+
+      - type: entities
+        title: Schlaf
+        entities:
+          - entity: sensor.baby_schlaft_seit
+          - entity: sensor.baby_letzter_schlaf
+          - entity: sensor.baby_schlaf_heute
+          - entity: sensor.baby_aufgewacht_heute_nacht
+          - entity: sensor.baby_weinen_heute
+          - entity: sensor.baby_letzte_bewegung
+          - entity: sensor.baby_schlafsack_empfehlung
+
+      # Optionale Teile. Entferne, was du nicht nutzt.
+      # „Atembewegung" ist ein Hinweis aus einer nicht validierten Quelle, keine
+      # Messung. „Unbekannt" heißt: keine Quelle ist brauchbar, nicht „alles gut".
+      - type: entities
+        title: Atembewegungs-Hinweis (optional)
+        entities:
+          - entity: binary_sensor.baby_atembewegung
+          - entity: sensor.baby_atemrate_schatzung
+          - entity: sensor.baby_herzrate_schatzung
+          - entity: binary_sensor.baby_im_bett
+          - entity: switch.baby_atembewegungs_alarm
+          - entity: select.baby_vitalquellen_mussen_ubereinstimmen
+
+      - type: entities
+        title: KI-Bewertung (optional)
+        entities:
+          - entity: switch.baby_ki_bewertung
+          - entity: sensor.baby_ki_bewertung
+          - type: attribute
+            entity: sensor.baby_ki_bewertung
+            attribute: reason
+            name: Begründung
+          - entity: sensor.baby_lage
+          - entity: button.baby_ki_check_jetzt
+          - entity: binary_sensor.baby_ki_bewertung_verfugbar
+          - entity: sensor.baby_ki_aufrufe_in_der_letzten_stunde
+
+      - type: entities
+        title: Schwellen
+        entities:
+          - entity: select.baby_empfindlichkeit
+          - entity: number.baby_weinen_bis_zur_warnung
+          - entity: number.baby_unbeantwortetes_weinen_bis_kritisch
+          - entity: number.baby_lautstarke_uber_dem_grundpegel
+          - entity: sensor.baby_gelernter_grundpegel
+          - entity: number.baby_keine_atembewegung_bis_zum_alarm
+          - entity: number.baby_abstand_der_ki_routineprufung
+          - entity: number.baby_niedrigste_raumtemperatur
+          - entity: number.baby_hochste_raumtemperatur
+          - entity: switch.baby_ton_weiterleitung
+          - entity: binary_sensor.baby_ton_weiterleitung_lauft
+          - entity: sensor.baby_altersprofil

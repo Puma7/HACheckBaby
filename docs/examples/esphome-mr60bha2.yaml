@@ -1,0 +1,94 @@
+# ESPHome configuration for the Seeed MR60BHA2 radar kit (XIAO ESP32-C6)
+#
+# UNTESTED: written from knowledge of the ESPHome component "seeed_mr60bha2"
+# and of the kit's wiring. It has never been compiled or flashed, and it has
+# never been pointed at a person. It has been checked for valid YAML only.
+# Compare it with https://esphome.io/components/seeed_mr60bha2/ for your
+# ESPHome version before you flash it.
+#
+# NOT VALIDATED ON INFANTS: the module is designed for adults at up to 1.5 m.
+# Whether it reports plausible values for a baby is unknown. What CheckBaby
+# makes of the values is a breathing-movement hint, not a medical measurement.
+# Read docs/en/vital-sources.md first.
+#
+# How the entities map to the CheckBaby sleep place (device name "bed-radar",
+# IDs on an English Home Assistant; check the real IDs in Home Assistant):
+#   sensor.bed_radar_breathing_rate        -> Breathing rate sensor (radar)
+#   sensor.bed_radar_heart_rate            -> Heart rate sensor (radar)
+#   binary_sensor.bed_radar_target_present -> Presence sensor for the bed
+#                                             (only if it proves reliable)
+#   sensor.bed_radar_distance, sensor.bed_radar_targets: for your own checks
+#
+# How CheckBaby reads the breathing rate: a number other than zero means
+# "breathing movement seen", zero means "none seen", and "unknown" or
+# "unavailable" means "not usable" (reported as the problem "vital_sensor").
+#
+# Secrets: put wifi_ssid, wifi_password, api_encryption_key and ota_password
+# into the secrets.yaml of ESPHome. Never commit them.
+
+esphome:
+  name: bed-radar
+  friendly_name: Bed radar
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+# The radar module is wired to the XIAO ESP32-C6 on these pins in the kit.
+uart:
+  id: radar_uart
+  rx_pin: GPIO17
+  tx_pin: GPIO16
+  baud_rate: 115200
+  parity: NONE
+  stop_bits: 1
+
+# With one UART and one radar, ESPHome links the parts below by itself.
+seeed_mr60bha2:
+  id: radar
+
+binary_sensor:
+  - platform: seeed_mr60bha2
+    has_target:
+      name: Target present
+
+sensor:
+  - platform: seeed_mr60bha2
+    breath_rate:
+      name: Breathing rate
+      filters:
+        # If the module stops sending a rate, the value turns to "unknown"
+        # after 30 seconds instead of showing the last rate for ever. A stale
+        # rate would look like continued breathing movement to CheckBaby.
+        # Side effect: while it is "unknown", CheckBaby reports the monitoring
+        # problem "vital_sensor". If that happens with an empty bed, you have
+        # learned how the module behaves; decide then whether to keep this.
+        - timeout: 30s
+    heart_rate:
+      name: Heart rate
+      filters:
+        - timeout: 30s
+    distance:
+      name: Distance
+    num_targets:
+      name: Targets
+
+# The kit also carries a BH1750 light sensor (I2C: SDA GPIO22, SCL GPIO23) and
+# an RGB LED (GPIO1). They are left out here on purpose: CheckBaby does not use
+# them, and an LED shining at the bed is not wanted at night.
