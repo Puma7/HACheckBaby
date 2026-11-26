@@ -142,6 +142,30 @@ Ein 60-GHz-Radarmodul, als Kit mit einem XIAO ESP32-C6 erhältlich. Mit ESPHome 
 - Geplant ist, zunächst nur die robuste Aussage „Ziel vorhanden und Atembewegung gesehen: ja oder nein" zu nutzen, nicht die exakte Rate. So behandelt es die Integration.
 - Vor dem Einsatz am Kind: an einem Erwachsenen gegen eine Smartwatch oder ein Pulsoximeter testen, 20 Sekunden die Luft anhalten und notieren, was der Sensor meldet, und notieren, was er bei leerem Bett meldet.
 
+#### Erste Schritte mit dem Kit
+
+Die Schritte stammen aus der [Anleitung von Seeed](https://wiki.seeedstudio.com/ha_with_mr60bha2/) und sind hier nicht an einem Gerät nachvollzogen.
+
+1. Das Kit kommt laut Seeed mit ESPHome-Firmware. Für den Anfang musst du nichts flashen. Strom über USB-C genügt; ein Ladegerät reicht, ein Computer ist nicht nötig.
+2. Das Gerät öffnet ein eigenes WLAN namens `seeedstudio-mr60bha2`. Verbinde ein Handy oder Notebook damit, öffne `192.168.4.1` und trage dein WLAN ein. Der ESP32-C6 funkt nur im 2,4-GHz-Band.
+3. In Home Assistant erscheint es unter Einstellungen → Geräte & Dienste als entdecktes ESPHome-Gerät „Seeed Studio MR60BHA2 Kit …". Übernimm es.
+4. Das Gerät bringt diese Entitäten mit: „Real-time respiratory rate" (Atemrate), „Real-time heart rate" (Herzrate), „Person Information" (Ziel vorhanden), „Distance to detection object", „Target number", dazu einen Helligkeitssensor und eine RGB-LED als Licht. Schalte die LED aus, bevor das Gerät an ein Bett kommt.
+5. Mach den Vortest an einem Erwachsenen (letzter Punkt der Liste oben), bevor du etwas in CheckBaby einträgst.
+6. Trage dann im Schlafplatz „Real-time respiratory rate" unter „Atemraten-Sensor (Radar)" und „Real-time heart rate" unter „Herzraten-Sensor (Radar)" ein. Lass den Schalter „Atembewegungs-Alarm" aus.
+
+Die Beispielkonfiguration [`esphome-mr60bha2.yaml`](../examples/esphome-mr60bha2.yaml) brauchst du erst, wenn du die Firmware selbst verwalten willst, etwa um die LED ganz wegzulassen.
+
+#### Was Seeed zum Verhalten des Moduls angibt
+
+Aus derselben Anleitung, für Radar-Firmware ab 1.6.12; nichts davon ist hier gemessen:
+
+- Atem- und Herzrate gelten für **eine ruhig liegende Person in 0,5 bis 1,5 m Abstand**, bei fest montiertem Gerät ohne Erschütterung.
+- **Kein Ziel in diesem Bereich: Atem- und Herzrate werden als 0 gemeldet.** Für CheckBaby ist das „keine Atembewegung gesehen", also dasselbe wie bei einem Kind, das sich nicht bewegt.
+- **Ziel weiter als 1,5 m entfernt: Die Werte werden nicht mehr aktualisiert und bleiben auf dem letzten Stand.** Ein zu weit montiertes Modul kann also eine Atemrate anzeigen, die es nicht mehr misst. Meldet es den alten Wert dabei weiter, erkennt CheckBaby das nicht; die 120-Sekunden-Grenze greift nur, wenn das Modul verstummt. Bleib deshalb deutlich unter 1,5 m und prüfe den Abstand mit der Entität „Distance to detection object".
+- Ventilator, Klimaanlage oder ein wehender Vorhang können ohne Person eine Herzrate ungleich null erzeugen; die Atemrate bleibt dabei laut Seeed 0.
+- Die Zahl der Ziele nennt Seeed experimentell.
+- Die Firmware des Radarmoduls selbst lässt sich nur über USB im Gehäuse mit einem Programm von Seeed aktualisieren, nicht über ESPHome.
+
 ### Aqara FP2
 
 Der FP2 meldet Präsenz und Zonen lokal über HomeKit. Seine Atemrate, Herzrate und Schlafphase gibt es nur in der Aqara-Cloud; ein Community-Add-on (SleepRadar) liest sie von dort.

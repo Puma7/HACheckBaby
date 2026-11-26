@@ -11,6 +11,14 @@
 # makes of the values is a breathing-movement hint, not a medical measurement.
 # Read docs/en/vital-sources.md first.
 #
+# You do not need this file to begin: according to Seeed the kit ships with
+# ESPHome firmware and can be added to Home Assistant as it is (see "First
+# steps with the kit" in docs/en/vital-sources.md). Its entities are then
+# called "Real-time respiratory rate", "Real-time heart rate" and "Person
+# Information". Use this file once you want to manage the firmware yourself.
+# Board, UART pins and UART settings below match the configuration in Seeed's
+# guide (https://wiki.seeedstudio.com/ha_with_mr60bha2/).
+#
 # How the entities map to the CheckBaby sleep place (device name "bed-radar",
 # IDs on an English Home Assistant; check the real IDs in Home Assistant):
 #   sensor.bed_radar_breathing_rate        -> Breathing rate sensor (radar)

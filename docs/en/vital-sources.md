@@ -142,6 +142,30 @@ A 60 GHz radar module sold as a kit with a XIAO ESP32-C6. With ESPHome it report
 - The plan is to use only the robust statement "target present and breathing movement seen: yes or no" at first, not the exact rate. That is how the integration treats it.
 - Before use with a child: test it on an adult against a smartwatch or pulse oximeter, hold your breath for 20 seconds and note what the sensor reports, and note what it reports for an empty bed.
 
+#### First steps with the kit
+
+These steps come from [Seeed's guide](https://wiki.seeedstudio.com/ha_with_mr60bha2/) and have not been followed on a device here.
+
+1. According to Seeed the kit ships with ESPHome firmware. You do not have to flash anything to begin. Power over USB-C is enough; a charger will do, no computer is needed.
+2. The device opens a Wi-Fi network of its own called `seeedstudio-mr60bha2`. Connect a phone or notebook to it, open `192.168.4.1` and enter your Wi-Fi. The ESP32-C6 uses the 2.4 GHz band only.
+3. In Home Assistant it appears under Settings → Devices & services as a discovered ESPHome device "Seeed Studio MR60BHA2 Kit …". Add it.
+4. The device brings these entities: "Real-time respiratory rate", "Real-time heart rate", "Person Information" (target present), "Distance to detection object", "Target number", plus a light sensor and an RGB LED as a light. Switch the LED off before the device goes near a bed.
+5. Do the test on an adult (last item of the list above) before you enter anything in CheckBaby.
+6. Then enter "Real-time respiratory rate" under "Breathing rate sensor (radar)" and "Real-time heart rate" under "Heart rate sensor (radar)" in the sleep place. Leave the switch "Breathing-movement alert" off.
+
+You need the example configuration [`esphome-mr60bha2.yaml`](../examples/esphome-mr60bha2.yaml) only once you want to manage the firmware yourself, for example to leave the LED out altogether.
+
+#### What Seeed states about the module's behaviour
+
+From the same guide, for radar firmware 1.6.12 and later; none of it has been measured here:
+
+- Breathing and heart rate apply to **one person lying still at 0.5 to 1.5 m**, with the device mounted firmly and free of vibration.
+- **No target in that range: breathing and heart rate are reported as 0.** For CheckBaby that is "no breathing movement seen", the same as for a child that does not move.
+- **Target further away than 1.5 m: the values stop updating and keep their last state.** A module mounted too far away can therefore show a breathing rate it no longer measures. If it keeps reporting the old value, CheckBaby cannot tell; the 120-second limit only applies when the module falls silent. Stay well below 1.5 m and check the distance with the entity "Distance to detection object".
+- A fan, an air conditioner or a moving curtain can produce a heart rate other than zero with no person present; according to Seeed the breathing rate stays 0.
+- Seeed calls the number of targets experimental.
+- The firmware of the radar module itself can only be updated over USB inside the case with a program from Seeed, not through ESPHome.
+
 ### Aqara FP2
 
 The FP2 reports presence and zones locally through HomeKit. Its breathing rate, heart rate and sleep stage exist only in Aqara's cloud; a community add-on (SleepRadar) reads them from there.
